@@ -13,6 +13,7 @@ Les fichiers sources dans src/<br>
 Les tests dans tests/<br>
 Les bibliothèques externes dans lib/<br>
 La documentation dans doc/<br>
+Les suivis de progression de chacun dans README/<br>
 1 classe par fichier<br>
 
 ## Conventions de nomage
@@ -27,3 +28,4 @@ Les espaces de noms en miniscules et en 1 seul mot<br>
 Utiliser des includes guards dans les headers<br>
 Laisser les bibliothèque gérer la mémoire au maximum<br>
 Utiliser les exeptions que dans des cas exeptionnel<br>
+Mettre les attributs et méthodes publiques avant celles privés<br>
