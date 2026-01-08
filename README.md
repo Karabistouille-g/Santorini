@@ -2,28 +2,28 @@
 Projet de l'année, le JOAT (jeu of all time)
 
 ## Dépendances
-CMake
-Doxygen
-Google Test
+CMake <br>
+Doxygen <br>
+Google Test <br>
 
 ## Organisation
-Les fichiers executables dans le dossier build/
-Les headers dans include/
-Les fichiers sources dans src/
-Les tests dans tests/
-Les bibliothèques externes dans lib/
-La documentation dans doc/
-1 classe par fichier
+Les fichiers executables dans le dossier build/ <br>
+Les headers dans include/<br>
+Les fichiers sources dans src/<br>
+Les tests dans tests/<br>
+Les bibliothèques externes dans lib/<br>
+La documentation dans doc/<br>
+1 classe par fichier<br>
 
 ## Conventions de nomage
-Les classes sont en PascalCase
-Les fonctions et variables sont en camelCase
-Les fichiers sont camelCase et reprenne le nom de la classe qu'ils définissent
-Les constantes sont en UPPER_SNAKE_CASE
-Les attribut privés sont finissent par _
-Les espaces de noms en miniscules et en 1 seul mot
+Les classes sont en PascalCase<br>
+Les fonctions et variables sont en camelCase<br>
+Les fichiers sont camelCase et reprenne le nom de la classe qu'ils définissent<br>
+Les constantes sont en UPPER_SNAKE_CASE<br>
+Les attribut privés sont finissent par _<br>
+Les espaces de noms en miniscules et en 1 seul mot<br>
 
 ## Best-practices
-Utiliser des includes guards dans les headers
-Laisser les bibliothèque gérer la mémoire au maximum
-Utiliser les exeptions que dans des cas exeptionnel
+Utiliser des includes guards dans les headers<br>
+Laisser les bibliothèque gérer la mémoire au maximum<br>
+Utiliser les exeptions que dans des cas exeptionnel<br>
