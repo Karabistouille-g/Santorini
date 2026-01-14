@@ -1,6 +1,11 @@
 #ifndef MODEL_H
 #define MODEL_H
 
+#include "board.hpp"
+#include "builder.hpp"
+#include "case.hpp"
+#include <stdio.h>
+
 class Model {
 
     public:
@@ -13,12 +18,12 @@ class Model {
         /**
          * Create the board with case and add th builders
          */
-        bool startGame();
+        bool startGame(int playerOne, int playerTwo);
 
         /**
          * Start the turn of the next player
          */
-        bool playTurn();
+        bool playTurn(int player);
 
         /**
          * Check the win condition
@@ -26,6 +31,10 @@ class Model {
         bool endGame();
 
     private:
+
+        Board* board_;
+        int currentPlayer_;
+        Builder* pawns[2][2];
 };
 
 #endif // MODEL_H

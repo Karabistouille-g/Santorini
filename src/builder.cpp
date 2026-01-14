@@ -1,53 +1,69 @@
 #include "include/builder.hpp"
+#include "include/board.hpp"
+#include "include/case.hpp"
 
-Case** tab;
-
-Builder::Builder(int x, int y) {
-
-    Board& b = Board::getInstance();
-    Case** tab = b.getCases();
-
-    currentCase = tab[x][y];
+Builder::Builder() {
+    b_ = Board::getInstance();
+    position_ = placeOnTheBoard();
 }
 
-bool Builder::moveBuilder(int x, int y) {
+Case* Builder::getPosition() {
+    return position_;
+} 
 
-    verifCoordonate(x, y);
+bool Builder::moveBuilder() {
 
-    int curFloor = currentCase.getFloor();
+    Case* target = placeOnTheBoard();
+    if (!validCase(target)) return false;
 
-    Case target = tab[x][y];
-    int targetFloor = target.getFloor();
+    int floor = position_->getFloor();
+    int targetFloor = target->getFloor();
     
-    if (curFloor + 1 < targetFloor) return false;
+    if (floor + 1 < targetFloor) return false;
 
-    currentCase = tab[x][y];
+    position_ = target;
 }
 
-bool Builder::createBuild(int x, int y) {
+bool Builder::createBuild() {
 
-    verifCoordonate(x, y);
+    Case* target = placeOnTheBoard();
+    if (validCase(target)) return false;
 
-    Case target = tab[x][y];
-    int targetFloor = target.getFloor();
-
+    int targetFloor = target->getFloor();
     if (targetFloor <= 4) return false;
 
-    target.addFloor();
+    target->addFloor();
     return true;
 }
 
-bool Builder::verifCoordonate(int x, int y) {
+bool Builder::validCase(Case* target) {
 
-    int curX = currentCase.getX();
-    int curY = currentCase.getY();
-
-    if ((curX != x) || (curX + 1 != x) | (curX - 1 != x)) return false;
-    if ((curY != y) || (curY + 1 != y) | (curY - 1 != y)) return false;
+    int curX = position_->getX();
+    int curY = position_->getY();
 
     if ((curX + 1 > 5) || (curX - 1 < 0)) return false;
     if ((curY + 1 > 5) || (curY - 1 < 0)) return false;
 
+    int tarX = target->getX();
+    int tarY = target->getY();
+
+    if ((curX != tarX) || (curX + 1 != tarX) | (curX - 1 != tarX)) return false;
+    if ((curY != tarY) || (curY + 1 != tarY) | (curY - 1 != tarY)) return false;
+
     return true;
+}
+
+Case* Builder::placeOnTheBoard() {
+    int x, y;
+
+    std::cout << "Coordonate X: ";
+    std::cin >> x;
+    std::cout << std::endl;
+
+    std::cout << "Coordonate Y: ";
+    std::cin >> y;
+    std::cout << std::endl;
+
+    return b_->getCase(x, y);
 }
 

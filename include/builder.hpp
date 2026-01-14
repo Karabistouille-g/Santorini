@@ -1,40 +1,50 @@
 #ifndef BUILDER_H
 #define BUILDER_H
 
-#include "case.hpp"
-#include "board.hpp"
+class Case;
+class Board;
 
 #include <stdio.h>
+#include <iostream>
 
 class Builder {
     
     public:
-
         /**
          * Create a builder
-         * @param x coord X selected by the player
-         * @param y coord Y selected by the player
          */
-        Builder(int x, int y);
+        Builder();
+
+        /**
+         * Get the position of the builder
+         */
+        Case* getPosition();
 
         /**
          * Move the builder on the board
          */
-        bool moveBuilder(int x, int y);
+        bool moveBuilder();
 
         /**
          * Build a floor on the board
          */
-        bool createBuild(int x, int y);
+        bool createBuild();
 
     private:
 
-        Case currentCase;
+        Board* b_; 
+        Case* position_;
+        int player_; 
 
         /**
          * Verify if the coordonate is corect
          */
-        bool verifCoordonate(int x, int y);
+        bool validCase(Case* case_);
+
+        /**
+         * Ask the player where to place the builder
+         */
+        Case* placeOnTheBoard();
 };
 
 #endif // BUILDER_H
