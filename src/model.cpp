@@ -9,13 +9,15 @@ Model::Model() {
 bool Model::startGame(int playerOne, int playerTwo) {
     board_ = Board::getInstance();
 
+    int x, y; // Demander aux joueurs ou placer leurs pions
+
     // First builder
-    pawns[0][0] = new Builder();
-    pawns[1][0] = new Builder();
+    pawns[0][0] = new Builder(x, y);
+    pawns[1][0] = new Builder(x, y);
 
     // Second builder
-    pawns[0][1] = new Builder();
-    pawns[1][1] = new Builder();
+    pawns[0][1] = new Builder(x, y);
+    pawns[1][1] = new Builder(x, y);
 
     return true;
 }
@@ -30,13 +32,17 @@ bool Model::playTurn(int player) {
         std::cout << "Select the builder to move (1 or 2) : ";
         std::cin >> builder;
     } while (builder != 1 && builder != 2);
-    pawns[player][builder]->moveBuilder();
+
+    int x, y; // Demander ou le joueur veut déplacer son pion
+    pawns[player][builder]->moveBuilder(x, y);
 
     do {
         std::cout << "Select the builder to build (1 or 2) : ";
         std::cin >> builder;
     } while (builder != 1 && builder != 2);
-    pawns[player][builder]->createBuild();
+
+    int x, y; // Demander ou le joueur veut construire
+    pawns[player][builder]->createBuild(x, y);
 
     endGame();
 

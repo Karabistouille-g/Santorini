@@ -1,4 +1,6 @@
-# 08/01/2026
+Création d'un premier diagramme UML pour définir les fonctionnalités des classes
 
-Début du projet, conception du premier diagramme UML.
-Mise en place des fichiers concernant le moteur du jeu ainsi que le modèle.
+Mise en place de la première version des méthodes de builder, case, board et model
+
+Générer les tests avec IA, mais vérification de la conformité des tests
+

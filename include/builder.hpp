@@ -13,7 +13,7 @@ class Builder {
         /**
          * Create a builder
          */
-        Builder();
+        Builder(int x, int y);
 
         /**
          * Get the position of the builder
@@ -23,12 +23,12 @@ class Builder {
         /**
          * Move the builder on the board
          */
-        bool moveBuilder();
+        bool moveBuilder(int x, int y);
 
         /**
          * Build a floor on the board
          */
-        bool createBuild();
+        bool createBuild(int x, int y);
 
     private:
 
@@ -40,11 +40,6 @@ class Builder {
          * Verify if the coordonate is corect
          */
         bool validCase(Case* case_);
-
-        /**
-         * Ask the player where to place the builder
-         */
-        Case* placeOnTheBoard();
 };
 
 #endif // BUILDER_H
