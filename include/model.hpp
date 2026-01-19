@@ -30,6 +30,17 @@ class Model {
          */
         bool endGame();
 
+        // --- Partie de louis pour le controller---
+        // Permet de recup pion spécifique pour le bouger
+        Builder* getPawn(int player, int index) {
+            if (player >= 0 && player < 2 && index >= 0 && index < 2) {
+                return pawns[player][index];
+            }
+            return nullptr;
+        }
+       
+        // ------------------------------------------------
+
     private:
 
         Board* board_;

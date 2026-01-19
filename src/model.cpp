@@ -9,49 +9,55 @@ Model::Model() {
 bool Model::startGame(int playerOne, int playerTwo) {
     board_ = Board::getInstance();
 
-    int x, y; // Demander aux joueurs ou placer leurs pions
+    //  demande pas à l'utilisateur, on impose les positions de départ
+    // Sinon avec "int x, y" non initialises le jeu plante direct
+    
+    // Joueur 1 (Positions fixes : Coins gauche)
+    pawns[0][0] = new Builder(0, 0); 
+    pawns[0][1] = new Builder(0, 4);
 
-    // First builder
-    pawns[0][0] = new Builder(x, y);
-    pawns[1][0] = new Builder(x, y);
+    // Joueur 2 (Positions fixes : Coins droite)
+    pawns[1][0] = new Builder(4, 0);
+    pawns[1][1] = new Builder(4, 4);
 
-    // Second builder
-    pawns[0][1] = new Builder(x, y);
-    pawns[1][1] = new Builder(x, y);
-
+    std::cout << "[Model] Game started. Pawns placed correctly." << std::endl;
     return true;
 }
 
 bool Model::playTurn(int player) {
-
     if (player != currentPlayer_) return false;
 
     int builder;
-
     do {
-        std::cout << "Select the builder to move (1 or 2) : ";
+        std::cout << "Select builder (1 or 2): ";
         std::cin >> builder;
     } while (builder != 1 && builder != 2);
 
-    int x, y; // Demander ou le joueur veut déplacer son pion
+    int x, y;
+    std::cout << "Move X Y: ";
+    std::cin >> x >> y; 
     pawns[player][builder]->moveBuilder(x, y);
 
     do {
-        std::cout << "Select the builder to build (1 or 2) : ";
+        std::cout << "Select builder to build: ";
         std::cin >> builder;
     } while (builder != 1 && builder != 2);
 
-    int x, y; // Demander ou le joueur veut construire
+
+    std::cout << "Build X Y: ";
+    std::cin >> x >> y; 
+    
     pawns[player][builder]->createBuild(x, y);
-
     endGame();
-
-    player = (player + 1) % 2; // FIXME a adapté
+    
+    return true; 
 }
 
 bool Model::endGame() {
     for (int i = 0; i < 2; i++) {
         for (int j = 0; j < 2; j++) {
+            //vérifie que le pion existe
+            if (pawns[i][j] == nullptr) continue;
             Case* pos = pawns[i][j]->getPosition();
             if (pos == nullptr) continue; // FIXME message d'erreur
             if (pos->getFloor() == 3) {

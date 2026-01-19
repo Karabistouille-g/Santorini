@@ -3,42 +3,37 @@
 
 #include <memory>
 #include <string>
-#include "network_manager.hpp"
+#include "common.hpp"
 
-// Forward declarations (on dit juste que les classes existent)
-class Model;  // Classe de ton collègue
-class View;   // Classe de l'autre collègue (supposée)
+// Forward declaration
+class Model; 
 
 namespace santorini {
+
+class NetworkManager;
 
 class Controller {
 public:
     Controller();
     ~Controller();
 
-    /**
-     * @brief Initialise le jeu et la connexion réseau
-     * @param isOnline true pour jouer en réseau
-     * @param isServer true si on héberge
-     * @param ip IP cible (seulement si isServer = false)
-     * @return 0 si succès, -1 si erreur
-     */
-    int createGame(bool isOnline, bool isServer, const std::string& ip = "127.0.0.1");
+    // On ajoute le paramètre "port" ici (par défaut 5050)
+    int createGame(bool isOnline, bool isServer, const std::string& ip = "", int port = 5050);
 
-    /**
-     * @brief Vérifie le réseau (à appeler dans la boucle principale)
-     */
+    bool selectMove(int pawnId, int x, int y);
+    bool selectBuild(int pawnId, int x, int y);
+    
     void processNetwork();
 
 private:
     std::unique_ptr<Model> model_;
-    // std::unique_ptr<View> view_; a decommenter quand thibault aura fait View
     std::unique_ptr<NetworkManager> net_;
 
     bool isOnlineMode_;
     bool isMyTurn_;
+    int myPlayerId_;
 };
 
 }
 
-#endif // CONTROLLER_HPP
+#endif
