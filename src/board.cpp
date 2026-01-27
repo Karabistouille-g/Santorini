@@ -1,5 +1,5 @@
-#include "include/board.hpp"
-#include "include/case.hpp"
+#include "board.hpp"
+#include "case.hpp"
 
 Board* Board::instance_ = nullptr;
 Case* Board::cases_[5][5] = {nullptr};
@@ -17,6 +17,21 @@ Board* Board::getInstance() {
         instance_ = new Board();
     }
     return instance_;
+}
+
+bool Board::resetInstance() {
+    if (instance_ != nullptr) {
+        for (int i = 0; i < 5; i++) {
+            for (int j = 0; j < 5; j++) {
+                delete cases_[i][j];
+                cases_[i][j] = nullptr;
+            }
+        }
+        delete instance_;
+        instance_ = nullptr;
+        return true;
+    }
+    return false;
 }
 
 Case* Board::getCase(int x, int y) {

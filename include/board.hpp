@@ -16,6 +16,11 @@ class Board {
          */
         static Case* getCase(int x, int y);
 
+        /**
+         * Destroy the board instance
+         */
+        static bool resetInstance();
+
     private:
 
         static Board* instance_;

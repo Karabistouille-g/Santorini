@@ -30,11 +30,3 @@ TEST(CaseTest, AddFloor) {
     EXPECT_FALSE(c.addFloor());
     EXPECT_EQ(c.getFloor(), 4);
 }
-
-TEST(CaseTest, )
-
-int main(int argc, char **argv)
-{
-  ::testing::InitGoogleTest(&argc, argv);
-  return RUN_ALL_TESTS();
-}

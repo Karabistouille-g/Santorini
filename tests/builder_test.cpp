@@ -23,6 +23,8 @@ TEST(BuilderTest, MoveBuilderValid) {
     ASSERT_NE(pos, nullptr);
     EXPECT_EQ(pos->getX(), 2);
     EXPECT_EQ(pos->getY(), 3);
+
+    board->resetInstance();
 }
 
 TEST(BuilderTest, MoveBuidlerOwnPosition) {
@@ -35,6 +37,8 @@ TEST(BuilderTest, MoveBuidlerOwnPosition) {
     ASSERT_NE(pos, nullptr);
     EXPECT_EQ(pos->getX(), 2);
     EXPECT_EQ(pos->getY(), 2);
+
+    board->resetInstance();
 }
 
 TEST(BuilderTest, MoveBuilderTooFar) {
@@ -47,6 +51,8 @@ TEST(BuilderTest, MoveBuilderTooFar) {
     ASSERT_NE(pos, nullptr);
     EXPECT_EQ(pos->getX(), 2);
     EXPECT_EQ(pos->getY(), 2);
+
+    board->resetInstance();
 }
 
 TEST(BuilderTest, MoveBuilderTooHigh) {
@@ -65,6 +71,8 @@ TEST(BuilderTest, MoveBuilderTooHigh) {
     ASSERT_NE(pos, nullptr);
     EXPECT_EQ(pos->getX(), 2);
     EXPECT_EQ(pos->getY(), 2);
+
+    board->resetInstance();
 }
 
 TEST(BuilderTest, MoveBuilderTooLowFirstFloor) {
@@ -84,6 +92,8 @@ TEST(BuilderTest, MoveBuilderTooLowFirstFloor) {
     ASSERT_NE(pos, nullptr);
     EXPECT_EQ(pos->getX(), 3);
     EXPECT_EQ(pos->getY(), 3);
+
+    board->resetInstance();
 }
 
 TEST(BuilderTest, MoveBuilderTooLowSecondFloor) {
@@ -103,6 +113,8 @@ TEST(BuilderTest, MoveBuilderTooLowSecondFloor) {
     ASSERT_NE(pos, nullptr);
     EXPECT_EQ(pos->getX(), 3);
     EXPECT_EQ(pos->getY(), 3);
+
+    board->resetInstance();
 }
 
 TEST(BuilderTest, MoveBuilderTooLowThirdFloor) {
@@ -125,6 +137,8 @@ TEST(BuilderTest, MoveBuilderTooLowThirdFloor) {
     ASSERT_NE(pos, nullptr);
     EXPECT_EQ(pos->getX(), 1);
     EXPECT_EQ(pos->getY(), 1);
+
+    board->resetInstance();
 }
 
 TEST(BuilderTest, CreateBuildValid) {
@@ -137,6 +151,8 @@ TEST(BuilderTest, CreateBuildValid) {
     ASSERT_NE(target, nullptr);
     EXPECT_EQ(target->getX(), 2);
     EXPECT_EQ(target->getY(), 2);
+
+    board->resetInstance();
 }
 
 TEST(BuilderTest, CreateBuildOwnPosition) {
@@ -149,6 +165,8 @@ TEST(BuilderTest, CreateBuildOwnPosition) {
     ASSERT_NE(target, nullptr);
     EXPECT_EQ(target->getX(), 2);
     EXPECT_EQ(target->getY(), 2);
+
+    board->resetInstance();
 }
 
 TEST(BuilderTest, CreateBuildTooFar) {
@@ -161,10 +179,6 @@ TEST(BuilderTest, CreateBuildTooFar) {
     ASSERT_NE(target, nullptr);
     EXPECT_EQ(target->getX(), 2);
     EXPECT_EQ(target->getY(), 2);
-}
 
-int main(int argc, char **argv)
-{
-  ::testing::InitGoogleTest(&argc, argv);
-  return RUN_ALL_TESTS();
+    board->resetInstance();
 }

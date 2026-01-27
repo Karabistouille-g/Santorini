@@ -6,6 +6,7 @@
 using namespace santorini;
 
 int main(int argc, char* argv[]) {
+
     Controller controller;
     bool isServer = false;
     std::string ip = "127.0.0.1";

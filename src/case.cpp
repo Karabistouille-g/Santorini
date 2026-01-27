@@ -1,4 +1,4 @@
-#include "include/case.hpp"
+#include "case.hpp"
 
 Case::Case(int x, int y) {
     x_ = x;

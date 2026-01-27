@@ -1,6 +1,6 @@
-#include "include/model.hpp"
-#include "include/board.hpp"
-#include "include/builder.hpp"
+#include "model.hpp"
+#include "board.hpp"
+#include "builder.hpp"
 
 Model::Model() {
 

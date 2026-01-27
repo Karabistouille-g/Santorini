@@ -8,6 +8,9 @@ TEST(BoardTest, SingletonInstance) {
     Board* board1 = Board::getInstance();
     Board* board2 = Board::getInstance();
     EXPECT_EQ(board1, board2);
+
+    board1->resetInstance();
+    EXPECT_EQ(board2, nullptr); // FIXME après resetInstance, board2 devrait être invalide
 }
 
 TEST(BoardTest, GetCase) {
@@ -23,10 +26,6 @@ TEST(BoardTest, GetCase) {
     ASSERT_NE(case44, nullptr);
     EXPECT_EQ(case44->getX(), 4);
     EXPECT_EQ(case44->getY(), 4);
-}
 
-int main(int argc, char **argv)
-{
-  ::testing::InitGoogleTest(&argc, argv);
-  return RUN_ALL_TESTS();
+    board->resetInstance();
 }
