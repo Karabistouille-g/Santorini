@@ -11,7 +11,8 @@ project(Santorini
 )
 
 find_package(Threads)
-
+find_package(glfw3 REQUIRED)
+find_package(OpenGL REQUIRED)
 
 add_executable(santorini
   src/board.cpp
@@ -21,6 +22,12 @@ add_executable(santorini
   src/main.cpp
   src/model.cpp
   src/network_manager.cpp
+)
+
+target_link_libraries(santorini
+  PRIVATE
+    glfw
+    OpenGL::GL
 )
 
 add_executable(tests
@@ -43,6 +50,7 @@ add_executable(tests
 target_include_directories(santorini
   PRIVATE
     "${CMAKE_CURRENT_SOURCE_DIR}/include"
+    "${CMAKE_CURRENT_SOURCE_DIR}/lib"
 )
 
 target_include_directories(tests
@@ -55,6 +63,8 @@ target_include_directories(tests
 target_link_libraries(tests
   PRIVATE
     Threads::Threads
+    glfw
+    OpenGL::GL
 )
 
 target_compile_options(santorini
