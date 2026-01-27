@@ -1,6 +1,8 @@
 #ifndef CASE_H
 #define CASE_H
 
+#include <builder.hpp>
+
 class Case {  
 
     public:
@@ -34,11 +36,22 @@ class Case {
          */
         bool addFloor();
 
+        /**
+         * Get the builder on this case
+         */
+        Builder* getBuilder();
+
+        /**
+         * Set the builder on this case
+         */
+        void setBuilder(Builder* builder);
+
     private:
 
         int x_;
         int y_;
         int floor_;  
+        Builder* builder_;
 };
 
 #endif // CASE_H

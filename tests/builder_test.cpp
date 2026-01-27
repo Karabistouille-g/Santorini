@@ -182,3 +182,17 @@ TEST(BuilderTest, CreateBuildTooFar) {
 
     board->resetInstance();
 }
+
+TEST(CaseTest, setAndGetBuilder) {
+    Builder bob(2, 2);
+
+    Case cas = Case(3, 4);
+    cas.setBuilder(&bob);
+    EXPECT_EQ(cas.getBuilder(), &bob);
+
+    Case* own = bob.getPosition();
+    Builder* bobob = own->getBuilder();
+
+    EXPECT_EQ(&bob, bobob);
+
+}

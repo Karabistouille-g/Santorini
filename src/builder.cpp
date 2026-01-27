@@ -33,6 +33,9 @@ bool Builder::moveBuilder(int x, int y) {
 
     std::cout << "Move successful" << std::endl;
 
+    position_->setBuilder(nullptr);
+    target->setBuilder(this);
+
     position_ = target;
     return true;
 }

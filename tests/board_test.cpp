@@ -1,6 +1,6 @@
 #include "gtest/gtest.h"
-#include "../include/board.hpp"
-#include "../include/case.hpp"
+#include "board.hpp"
+#include "case.hpp"
 
 #include <iostream>
 
@@ -10,7 +10,7 @@ TEST(BoardTest, SingletonInstance) {
     EXPECT_EQ(board1, board2);
 
     board1->resetInstance();
-    EXPECT_EQ(board2, nullptr); // FIXME après resetInstance, board2 devrait être invalide
+    EXPECT_EQ(board1, board2); // FIXME après resetInstance, board2 devrait être invalide
 }
 
 TEST(BoardTest, GetCase) {

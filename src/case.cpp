@@ -1,4 +1,5 @@
 #include "case.hpp"
+#include "builder.hpp"
 
 Case::Case(int x, int y) {
     x_ = x;
@@ -24,5 +25,13 @@ bool Case::addFloor() {
         return true;
     }
     return false;
+}
+
+Builder* Case::getBuilder() {
+    return builder_;
+}
+
+void Case::setBuilder(Builder* builder) {
+    builder_ = builder;
 }
 

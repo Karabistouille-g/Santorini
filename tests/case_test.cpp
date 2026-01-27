@@ -1,5 +1,7 @@
 #include "gtest/gtest.h"
-#include "../include/case.hpp"
+
+#include "case.hpp"
+#include "builder.hpp"
 
 #include <iostream>
 
