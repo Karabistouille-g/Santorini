@@ -4,7 +4,7 @@
 
 */
 
-#include <shader.hpp>
+#include <shaders/shader.hpp>
 #include <glad/glad.h>
 #include <iostream>
 #include <fstream>

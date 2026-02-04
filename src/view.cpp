@@ -1,8 +1,6 @@
 #include "view.hpp"
 #include "board.hpp"
 #include "case.hpp"
-#include <GLFW/glfw3.h>
-#include <glad/glad.h>
 #include <iostream>
 
 View::View()
@@ -19,14 +17,14 @@ View::View()
     glfwWindowHint( GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE );
 
     // Create window and OpenGL context
-    GLFWwindow * window = glfwCreateWindow( WINDOW_BASE_WIDTH, WINDOW_BASE_HEIGHT, "Santorini", nullptr, nullptr );
-    if( !window )
+    window_ = glfwCreateWindow( WINDOW_BASE_WIDTH, WINDOW_BASE_HEIGHT, "Santorini", nullptr, nullptr );
+    if( !window_ )
     {
         std::cerr << "Failed to create window" << std::endl;
         glfwTerminate();
         return;
     }
-    glfwMakeContextCurrent( window );
+    glfwMakeContextCurrent( window_ );
 
     // Initialize GLAD
     if( !gladLoadGLLoader( ( GLADloadproc ) glfwGetProcAddress ) )
@@ -37,7 +35,7 @@ View::View()
 
     glViewport( 0, 0, WINDOW_BASE_WIDTH, WINDOW_BASE_HEIGHT );
     // Update window upon resizing
-    glfwSetFramebufferSizeCallback( window,
+    glfwSetFramebufferSizeCallback( window_,
         []( GLFWwindow * window, int width, int height )
         {
             glViewport( 0, 0, width, height );
@@ -48,6 +46,22 @@ View::View()
     glEnable( GL_CULL_FACE );
     // glEnable( GL_BLEND );
     // glBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
+    
+    glClearColor( 0.0f, 0.0f, 0.0f, 1.0f );
+    glCheckError();
+}
+
+View::~View()
+{
+    glfwDestroyWindow( window_ );
+    glfwTerminate();
+    glCheckError();
+}
+
+View & View::getInstance()
+{
+    static View instance;
+    return instance;
 }
 
 void View::viewBoard( bool is3D )
@@ -86,7 +100,7 @@ void View::winner( bool is3D, int p )
     }
 }
 
-GLenum View::glCheckError( const char * file, int line )
+GLenum View::glCheckError( const char * file, int line ) const noexcept
 {
     GLenum errorCode = glGetError();
     while( ( errorCode != GL_NO_ERROR ) )
@@ -107,7 +121,7 @@ GLenum View::glCheckError( const char * file, int line )
     return errorCode;
 }
 
-void View::debugMat( glm::mat4 m )
+void View::debugMat( glm::mat4 m ) const noexcept
 {
     for( int i = 0; i < 4; i++ )
     {
@@ -118,7 +132,7 @@ void View::debugMat( glm::mat4 m )
     std::cout << std::endl;
 }
 
-void View::debugMat( glm::mat3 m )
+void View::debugMat( glm::mat3 m ) const noexcept
 {
     for( int i = 0; i < 3; i++ )
     {
@@ -129,7 +143,7 @@ void View::debugMat( glm::mat3 m )
     std::cout << std::endl;
 }
 
-void View::debugMat( glm::mat2 m )
+void View::debugMat( glm::mat2 m ) const noexcept
 {
     for( int i = 0; i < 2; i++ )
     {

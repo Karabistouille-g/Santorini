@@ -14,30 +14,26 @@ find_package(Threads)
 find_package(glfw3 REQUIRED)
 find_package(OpenGL REQUIRED)
 
-add_executable(santorini
-  src/board.cpp
-  src/builder.cpp
-  src/case.cpp
-  src/controller.cpp
-  src/main.cpp
-  src/model.cpp
-  src/network_manager.cpp
-)
+# View libraries
+add_library(glad lib/glad/glad.c)
+add_library(shader src/shader.cpp)
+add_library(view src/view.cpp)
+# Model libraries
+add_library(board src/board.cpp)
+add_library(builder src/builder.cpp)
+add_library(case src/case.cpp)
+add_library(model src/model.cpp)
+# Controller libraries
+add_library(network_manager src/network_manager.cpp)
+add_library(controller src/controller.cpp)
 
-target_link_libraries(santorini
-  PRIVATE
-    glfw
-    OpenGL::GL
-)
+# Link dependencies between libraries
+target_link_libraries(model PRIVATE board builder case)
+target_link_libraries(view PRIVATE glfw OpenGL::GL shader glad)
+target_link_libraries(controller PRIVATE network_manager model view)
 
+add_executable(santorini src/main.cpp)
 add_executable(tests
-  src/board.cpp
-  src/builder.cpp
-  src/case.cpp
-  src/controller.cpp
-  src/model.cpp
-  src/network_manager.cpp
-
   tests/board_test.cpp
   tests/builder_test.cpp
   tests/case_test.cpp
@@ -47,25 +43,25 @@ add_executable(tests
   lib/googletest/googletest/src/gtest_main.cc
 )
 
-target_include_directories(santorini
-  PRIVATE
-    "${CMAKE_CURRENT_SOURCE_DIR}/include"
-    "${CMAKE_CURRENT_SOURCE_DIR}/lib"
-)
-
+# Make all targets include necessary directories
+get_directory_property(all_targets BUILDSYSTEM_TARGETS)
+foreach(target IN ITEMS ${all_targets})
+    target_include_directories(${target} PUBLIC
+        ${GLFW_INCLUDE_DIRS}
+        ${OPENGL_INCLUDE_DIR}
+        ${PROJECT_SOURCE_DIR}/include
+        ${PROJECT_SOURCE_DIR}/lib
+    )
+endforeach()
+# Add googletest include directories for tests
 target_include_directories(tests
   PRIVATE
-    "${CMAKE_CURRENT_SOURCE_DIR}/include"
     "${CMAKE_CURRENT_SOURCE_DIR}/lib/googletest/googletest/include"
     "${CMAKE_CURRENT_SOURCE_DIR}/lib/googletest/googletest"
 )
 
-target_link_libraries(tests
-  PRIVATE
-    Threads::Threads
-    glfw
-    OpenGL::GL
-)
+target_link_libraries(santorini PRIVATE controller)
+target_link_libraries(tests PRIVATE Threads::Threads controller)
 
 target_compile_options(santorini
   PRIVATE
