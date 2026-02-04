@@ -5,57 +5,65 @@
 
 View::View()
 {
-    // Initialize GLFW
-    if( !glfwInit() )
-    {
-        std::cerr << "Failed to initialize GLFW" << std::endl;
-        return;
-    }
-    // Set OpenGL version to 4.3
-    glfwWindowHint( GLFW_CONTEXT_VERSION_MAJOR, 4 );
-    glfwWindowHint( GLFW_CONTEXT_VERSION_MINOR, 3 );
-    glfwWindowHint( GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE );
+    // // Initialize GLFW
+    // if( !glfwInit() )
+    // {
+    //     std::cerr << "Failed to initialize GLFW" << std::endl;
+    //     return;
+    // }
+    // // Set OpenGL version to 4.3
+    // glfwWindowHint( GLFW_CONTEXT_VERSION_MAJOR, 4 );
+    // glfwWindowHint( GLFW_CONTEXT_VERSION_MINOR, 3 );
+    // glfwWindowHint( GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE );
 
     // Create window and OpenGL context
-    window_ = glfwCreateWindow( WINDOW_BASE_WIDTH, WINDOW_BASE_HEIGHT, "Santorini", nullptr, nullptr );
-    if( !window_ )
-    {
-        std::cerr << "Failed to create window" << std::endl;
-        glfwTerminate();
-        return;
-    }
-    glfwMakeContextCurrent( window_ );
+    // window_ = glfwCreateWindow( WINDOW_BASE_WIDTH, WINDOW_BASE_HEIGHT, "Santorini", nullptr, nullptr );
+    // if( !window_ )
+    // {
+    //     std::cerr << "Failed to create window" << std::endl;
+    //     glfwTerminate();
+    //     return;
+    // }
+    // glfwMakeContextCurrent( window_ );
 
-    // Initialize GLAD
-    if( !gladLoadGLLoader( ( GLADloadproc ) glfwGetProcAddress ) )
-    {
-        std::cout << "Failed to initialize GLAD" << std::endl;
-        return;
-    }
+    // // Initialize GLAD
+    // if( !gladLoadGLLoader( ( GLADloadproc ) glfwGetProcAddress ) )
+    // {
+    //     std::cout << "Failed to initialize GLAD" << std::endl;
+    //     return;
+    // }
 
-    glViewport( 0, 0, WINDOW_BASE_WIDTH, WINDOW_BASE_HEIGHT );
-    // Update window upon resizing
-    glfwSetFramebufferSizeCallback( window_,
-        []( GLFWwindow * window, int width, int height )
-        {
-            glViewport( 0, 0, width, height );
-        }
-    );
+    // glViewport( 0, 0, WINDOW_BASE_WIDTH, WINDOW_BASE_HEIGHT );
+    // // Update window upon resizing
+    // glfwSetFramebufferSizeCallback( window_,
+    //     []( GLFWwindow * window, int width, int height )
+    //     {
+    //         glViewport( 0, 0, width, height );
+    //     }
+    // );
 
-    glEnable( GL_DEPTH_TEST );
-    glEnable( GL_CULL_FACE );
-    // glEnable( GL_BLEND );
-    // glBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
+    // glfwSetKeyCallback( window_,
+    //     []( GLFWwindow * window, int key, int scancode, int action, int mods )
+    //     {
+    //         if( key == GLFW_KEY_ESCAPE && action == GLFW_PRESS )
+    //             glfwSetWindowShouldClose( window, true );
+    //     }
+    // );
+
+    // glEnable( GL_DEPTH_TEST );
+    // glEnable( GL_CULL_FACE );
+    // // glEnable( GL_BLEND );
+    // // glBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
     
-    glClearColor( 0.0f, 0.0f, 0.0f, 1.0f );
-    glCheckError();
+    // glClearColor( 0.0f, 0.0f, 0.0f, 1.0f );
+    // glCheckError();
 }
 
 View::~View()
 {
-    glfwDestroyWindow( window_ );
-    glfwTerminate();
-    glCheckError();
+    // glfwDestroyWindow( window_ );
+    // glfwTerminate();
+    // glCheckError();
 }
 
 View & View::getInstance()
@@ -66,6 +74,8 @@ View & View::getInstance()
 
 void View::viewBoard( bool is3D )
 {
+    // glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
+
     Board * b = Board::getInstance();
     if( !is3D )
     {
@@ -87,6 +97,9 @@ void View::viewBoard( bool is3D )
         std::cout << std::endl; // newline and flush
         return;
     }
+
+    // glfwPollEvents();
+    // glfwSwapBuffers( window_ );
 }
 
 void View::winner( bool is3D, int p )
