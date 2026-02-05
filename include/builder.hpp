@@ -6,6 +6,7 @@ class Board;
 
 #include <stdio.h>
 #include <iostream>
+#include <stack>
 
 class Builder {
     
@@ -30,11 +31,19 @@ class Builder {
          */
         bool createBuild(int x, int y);
 
+        int getPlayer();
+
+        void undoMove();
+
+        void undoBuild();
+
     private:
 
         Board* b_; 
         Case* position_;
         int player_; 
+        std::stack<Case*> moves_;
+        std::stack<Case*> builds_;
 
         /**
          * Verify if the coordonate is corect

@@ -37,6 +37,11 @@ class Case {
         bool addFloor();
 
         /**
+         * Remove build
+         */
+        bool removeFloor();
+        
+        /**
          * Get the builder on this case
          */
         Builder* getBuilder();

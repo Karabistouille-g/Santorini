@@ -5,6 +5,7 @@
 #include "builder.hpp"
 #include "case.hpp"
 #include <stdio.h>
+#include <view.hpp>
 
 class Model {
 
@@ -46,6 +47,7 @@ class Model {
         Board* board_;
         int currentPlayer_;
         Builder* pawns[2][2];
+        View& view;
 };
 
 #endif // MODEL_H

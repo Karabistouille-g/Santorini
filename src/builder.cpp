@@ -7,6 +7,7 @@
 Builder::Builder(int x, int y) {
     b_ = Board::getInstance();
     position_ = b_->getCase(x, y);
+    moves_.push(position_);
 }
 
 Case* Builder::getPosition() {
@@ -37,6 +38,7 @@ bool Builder::moveBuilder(int x, int y) {
     target->setBuilder(this);
 
     position_ = target;
+    moves_.push(position_);
     return true;
 }
 
@@ -76,4 +78,19 @@ bool Builder::validCase(Case* target) {
     if (diffY < -1 || diffY > 1) return false;
 
     return true;
+}
+
+int Builder::getPlayer() {
+    return player_;
+}
+
+void Builder::undoMove() {
+    position_ = moves_.top();
+    moves_.pop();
+}
+
+void Builder::undoBuild() {
+    Case* build = builds_.top();
+    builds_.pop();
+    build->removeFloor();
 }

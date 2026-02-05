@@ -2,6 +2,7 @@
 #include <string>
 #include <limits>
 #include "../include/controller.hpp"
+#include <view.hpp>
 
 using namespace santorini;
 
