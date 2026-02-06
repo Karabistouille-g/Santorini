@@ -2,12 +2,14 @@
 #include "board.hpp"
 #include "builder.hpp"
 
-Model::Model() {
+Model::Model() : view(View::getInstance()) {
 
 }
 
 bool Model::startGame(int playerOne, int playerTwo) {
     board_ = Board::getInstance();
+
+    view.viewBoard(false);
 
     //  demande pas à l'utilisateur, on impose les positions de départ
     // Sinon avec "int x, y" non initialises le jeu plante direct

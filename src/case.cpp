@@ -27,6 +27,14 @@ bool Case::addFloor() {
     return false;
 }
 
+bool Case::removeFloor() {
+    if (floor_ > 0) {
+        floor_ -= 1;
+        return true;
+    }
+    return false;
+}
+
 Builder* Case::getBuilder() {
     return builder_;
 }
