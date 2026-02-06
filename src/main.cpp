@@ -2,6 +2,7 @@
 #include <string>
 #include <limits>
 #include "../include/controller.hpp"
+#include <view.hpp>
 
 using namespace santorini;
 
@@ -46,6 +47,7 @@ int main(int argc, char* argv[]) {
     // 3. Boucle principale
     while (true) {
         controller.processNetwork();
+        View::getInstance().viewBoard(false);
 
         std::cout << "\nAction (m/b/r) > ";
         std::cin >> cmd;

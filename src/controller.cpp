@@ -2,6 +2,7 @@
 #include "../include/model.hpp"
 #include "../include/network_manager.hpp"
 #include <iostream>
+#include <view.hpp>
 
 namespace santorini {
 
@@ -87,6 +88,7 @@ bool Controller::selectBuild(int pawnId, int x, int y) {
             net_->sendPacket(p);
             isMyTurn_ = false;
             std::cout << "--- END OF TURN (Waiting for opponent) ---" << std::endl;
+            View::getInstance().viewBoard(false);
         }
         return true;
     } else {

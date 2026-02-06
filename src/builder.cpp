@@ -7,6 +7,7 @@
 Builder::Builder(int x, int y) {
     b_ = Board::getInstance();
     position_ = b_->getCase(x, y);
+    position_->setBuilder(this);
 }
 
 Case* Builder::getPosition() {
