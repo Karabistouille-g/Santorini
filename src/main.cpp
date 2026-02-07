@@ -1,8 +1,10 @@
 #include <iostream>
 #include <string>
 #include <limits>
-#include "../include/controller.hpp"
-#include <view.hpp>
+
+#include "controller.hpp"
+#include "view.hpp"
+#include "board.hpp"
 
 using namespace santorini;
 
@@ -35,47 +37,29 @@ int main(int argc, char* argv[]) {
         return -1;
     }
 
-    std::cout << "\n=== JEU LANCE ===" << std::endl;
-    std::cout << "Commandes :" << std::endl;
-    std::cout << " - 'm' : Move (Deplacer)" << std::endl;
-    std::cout << " - 'b' : Build (Construire)" << std::endl;
-    std::cout << " - 'r' : Refresh (Voir si l'adversaire a joue)" << std::endl;
+    std::cout << "Main ligne 40" << std::endl;
 
     char cmd;
+    int cpt = 0;
     int id, x, y;
+    View& view = View::getInstance();
+    GLFWwindow* window = view.getWindow();
 
     // 3. Boucle principale
-    while (true) {
+    while (!glfwWindowShouldClose(window)) {
+
         controller.processNetwork();
-        View::getInstance().viewBoard(false);
+        
+        view.processInput(window, controller);
 
-        std::cout << "\nAction (m/b/r) > ";
-        std::cin >> cmd;
+        if (Board::getInstance() != nullptr) {
+            view.viewBoard();
+        }
 
-        if (cmd == 'r') {
-            std::cout << "Verification du reseau..." << std::endl;
-            continue; 
-        }
-        else if (cmd == 'm') {
-            std::cout << "Format: [ID_PION] [X] [Y] (ex: 0 1 1) > ";
-            if (std::cin >> id >> x >> y) {
-                controller.selectMove(id, x, y);
-            } else {
-                std::cout << "Erreur de saisie." << std::endl;
-                std::cin.clear(); 
-                std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-            }
-        }
-        else if (cmd == 'b') {
-            std::cout << "Format: [ID_PION] [X] [Y] (ex: 0 1 1) > ";
-            if (std::cin >> id >> x >> y) {
-                controller.selectBuild(id, x, y);
-            } else {
-                std::cout << "Erreur de saisie." << std::endl;
-                std::cin.clear();
-                std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-            }
-        }
+        glfwPollEvents();
+        glfwSwapBuffers(window);
+
+        cpt++;
     }
 
     return 0;

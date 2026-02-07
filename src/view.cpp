@@ -1,9 +1,10 @@
 #include "view.hpp"
-#include "board.hpp"
 #include "case.hpp"
 #include <iostream>
+#include <glm/gtc/matrix_transform.hpp>
+#include "controller.hpp"
 
-View::View()
+View::View() : cursorX_(2), cursorY_(2), lockX_(-1), lockY_(-1), lock_(false), lockBuilder_(nullptr), keyUpPressed_(false), keyDownPressed_(false), keyRightPressed_(false), keyLeftPressed_(false), b_(Board::getInstance())
 {
     // // Initialize GLFW
     if( !glfwInit() )
@@ -20,7 +21,7 @@ View::View()
     window_ = glfwCreateWindow( WINDOW_BASE_WIDTH, WINDOW_BASE_HEIGHT, "Santorini", nullptr, nullptr );
     if( !window_ )
     {
-        std::cerr << "Failed to create window" << std::endl;
+        std::cerr << "[ ERROR ] Failed to create window" << std::endl;
         glfwTerminate();
         return;
     }
@@ -29,7 +30,7 @@ View::View()
     // Initialize GLAD
     if( !gladLoadGLLoader( ( GLADloadproc ) glfwGetProcAddress ) )
     {
-        std::cout << "Failed to initialize GLAD" << std::endl;
+        std::cout << "[ ERROR ] Failed to initialize GLAD" << std::endl;
         return;
     }
 
@@ -51,19 +52,25 @@ View::View()
     );
 
     glEnable( GL_DEPTH_TEST );
-    glEnable( GL_CULL_FACE );
+    // glEnable( GL_CULL_FACE );
     glEnable( GL_BLEND );
     // // glBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
     
     // glClearColor( 0.0f, 0.0f, 0.0f, 1.0f );
     // glCheckError();
+
+    s_ = std::make_unique<Shader>("../include/shaders/vertex.vert", "../include/shaders/fragment.frag", nullptr);
+    m_ = std::make_unique<Mesh>();
 }
 
 View::~View()
 {
+    s_.reset(); 
+    m_.reset();
+
     glfwDestroyWindow( window_ );
     glfwTerminate();
-    glCheckError();
+    std::cout << "[ INFO ] Close the window" << std::endl;
 }
 
 View & View::getInstance()
@@ -72,44 +79,191 @@ View & View::getInstance()
     return instance;
 }
 
-void View::viewBoard( bool is3D )
+void View::viewBoard()
 {
+    glClearColor(0.15f, 0.15f, 0.34f, 1.0f);
+
     glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
 
-    Board * b = Board::getInstance();
-    if( !is3D )
+    s_->activate();
+
+    glm::mat4 projection = glm::perspective(glm::radians(45.0f), (float)WINDOW_BASE_WIDTH / (float)WINDOW_BASE_HEIGHT, 0.1f, 100.0f);
+    glm::mat4 view = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, -3.0f));
+
+    s_->setMat4("projection", projection);
+    s_->setMat4("view", view);
+
+    float spacing = 0.25f;
+    
+    for( int x = 0; x < 5; x++ )
     {
-        for( int x = 0; x < 5; x++ )
+        for( int y = 0; y < 5; y++ )
         {
-            for( int y = 0; y < 5; y++ )
-            {
-                if( b->getCase( x, y )->getBuilder() )
-                {
-                    std::cout << "|X|";
+            int floor = b_->getCase(x, y)->getFloor();
+            glm::mat4 model = glm::mat4(1.0f);
+
+            float posX = (x - 2.0f) * spacing;
+            float posY = (y - 2.0f) * spacing;
+            
+            model = glm::translate(model, glm::vec3(posX, posY, 0.0f));
+            s_->setVec3("caseColor", 1.0f / floor, 1.0f / floor, 1.0f / floor);
+            s_->setMat4("model", model);
+
+            m_->draw(*s_);
+
+            if (b_->getCase(x, y)->getBuilder()) {
+                model = glm::translate(model, glm::vec3(0.0f, 0.0f, 0.01f));
+                model = glm::scale(model, glm::vec3(0.5f, 0.5f, 1.0f));
+
+                if (b_->getCase(x, y)->getBuilder()->getPlayer() == 1) {
+                    s_->setVec3("caseColor", 1.0f, 0.0f, 0.0f);
                 }
-                else
-                {
-                    std::cout << "|" << b->getCase( x, y )->getFloor() << "|";
+                if (b_->getCase(x, y)->getBuilder()->getPlayer() == 2) {
+                    s_->setVec3("caseColor", 0.0f, 0.0f, 1.0f);
+                }
+                s_->setMat4("model", model);
+
+                m_->draw(*s_);
+            }
+
+            if (x == cursorX_ && y == cursorY_) {
+                glm::mat4 cursorModel = glm::mat4(1.0f);
+                cursorModel = glm::translate(cursorModel, glm::vec3(posX, posY, -0.001f));
+                cursorModel = glm::scale(cursorModel, glm::vec3(1.1f, 1.1f, 1.0f)); 
+                s_->setVec3("caseColor", 1.0f, 0.50f, 0.39f);
+                s_->setMat4("model", cursorModel);
+                m_->draw(*s_);
+            }
+
+            if (x == lockX_ && y == lockY_) {
+                glm::mat4 cursorModel = glm::mat4(1.0f);
+                cursorModel = glm::translate(cursorModel, glm::vec3(posX, posY, -0.0001f));
+                cursorModel = glm::scale(cursorModel, glm::vec3(1.1f, 1.1f, 1.0f)); 
+                s_->setVec3("caseColor", 1.0f, 0.0f, 0.0f);
+                s_->setMat4("model", cursorModel);
+                m_->draw(*s_);
+
+                // Affichage des cases possible
+                for (int i = -1; i <= 1; i++) {
+                    for (int j = -1; j <= 1; j++) {
+                        if (i == 0 && j == 0) continue;
+
+                        int targetX = x + i;
+                        int targetY = y + j;
+
+                        // SÉCURITÉ : On vérifie qu'on ne sort pas du plateau (0 à 4)
+                        if (targetX >= 0 && targetX < 5 && targetY >= 0 && targetY < 5) {
+                            
+                            // Calcul de la position réelle sur l'écran
+                            float pX = (targetX - 2.0f) * spacing;
+                            float pY = (targetY - 2.0f) * spacing;
+                            
+                            glm::mat4 moveModel = glm::mat4(1.0f);
+                            moveModel = glm::translate(moveModel, glm::vec3(pX, pY, -0.001f));
+                            moveModel = glm::scale(moveModel, glm::vec3(1.1f, 1.1f, 1.0f)); 
+                            
+                            s_->setVec3("caseColor", 0.0f, 1.0f, 0.0f); // Vert pour "possible"
+                            s_->setMat4("model", moveModel);
+                            m_->draw(*s_);
+                        }
+                    }
                 }
             }
-            std::cout << "\n";
         }
-        std::cout << std::endl; // newline and flush
-        return;
     }
-
-    glfwPollEvents();
-    glfwSwapBuffers( window_ );
 }
 
 void View::winner( bool is3D, int p )
 {
-    viewBoard( is3D );
+    viewBoard();
     if( !is3D )
     {
         Board * b = Board::getInstance();
         std::cout << "Player " << p << " wins !" << std::endl;
         return;
+    }
+}
+
+GLFWwindow* View::getWindow() {
+    return window_;
+}
+
+void View::processInput(GLFWwindow *window)
+{
+    if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
+        glfwSetWindowShouldClose(window, true);
+
+    if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS) {
+        if (!keyUpPressed_) {
+            if (cursorY_ < 4) {
+                cursorY_++;
+                std::cout << "UP " << cursorY_ << std::endl;
+            }
+            keyUpPressed_ = true;
+        }
+    } else {
+        keyUpPressed_ = false;
+    }
+
+    if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS) {
+        if (!keyDownPressed_) {
+            if (cursorY_ > 0) {
+                cursorY_--;
+                std::cout << "DOWN " << cursorY_ << std::endl;
+            } 
+            keyDownPressed_ = true;
+        }
+    } else {
+        keyDownPressed_ = false;
+    }
+
+    if (glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS) {
+        if (!keyRightPressed_) {
+            if (cursorX_ < 4) {
+                cursorX_++;
+                std::cout << "RIGHT " << cursorX_ << std::endl;
+            } 
+            keyRightPressed_ = true;
+        }
+    } else {
+        keyRightPressed_ = false;
+    }
+
+    if (glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS && lock_ == false) {
+        if (!keyLeftPressed_) {
+            if (cursorX_ > 0) {
+                cursorX_--;
+                std::cout << "LEFT " << cursorX_ << std::endl;
+            } 
+        keyLeftPressed_ = true;
+        }
+    } else {
+        keyLeftPressed_ = false;
+    }
+
+    if (glfwGetKey(window, GLFW_KEY_ENTER) == GLFW_PRESS) {
+        if (!keyEnterPressed_) {
+            if (!lock_) { 
+                auto targetBuilder = b_->getCase(cursorX_, cursorY_)->getBuilder();
+                // On vérifie qu'il y a un builder et que c'est le nôtre
+                if (targetBuilder && targetBuilder->getPlayer() == 1) {
+                    lockX_ = cursorX_;
+                    lockY_ = cursorY_;
+                    lockBuilder_ = targetBuilder;
+                    lock_ = true; // On passe à l'étape suivante
+                    std::cout << "PERSONNAGE SELECTIONNE" << std::endl;
+                }
+            } 
+            else {
+                
+                lock_ = false;
+                lockBuilder_ = nullptr;
+                std::cout << "PERSONNAGE DEPLACE" << std::endl;
+            }
+            keyEnterPressed_ = true;
+        }
+    } else {
+        keyEnterPressed_ = false;
     }
 }
 

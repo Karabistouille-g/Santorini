@@ -9,18 +9,16 @@ Model::Model() : view(View::getInstance()) {
 bool Model::startGame(int playerOne, int playerTwo) {
     board_ = Board::getInstance();
 
-    view.viewBoard(false);
-
     //  demande pas à l'utilisateur, on impose les positions de départ
     // Sinon avec "int x, y" non initialises le jeu plante direct
     
     // Joueur 1 (Positions fixes : Coins gauche)
-    pawns[0][0] = new Builder(0, 0); 
-    pawns[0][1] = new Builder(0, 4);
+    pawns[0][0] = new Builder(0, 0, playerOne); 
+    pawns[0][1] = new Builder(0, 4, playerOne);
 
     // Joueur 2 (Positions fixes : Coins droite)
-    pawns[1][0] = new Builder(4, 0);
-    pawns[1][1] = new Builder(4, 4);
+    pawns[1][0] = new Builder(4, 0, playerTwo);
+    pawns[1][1] = new Builder(4, 4, playerTwo);
 
     std::cout << "[Model] Game started. Pawns placed correctly." << std::endl;
     return true;

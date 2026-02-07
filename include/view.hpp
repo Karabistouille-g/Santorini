@@ -5,6 +5,14 @@
 #include <GLFW/glfw3.h>
 #include <GL/glext.h>
 #include <glm/glm.hpp>
+#include <memory>
+
+#include "mesh.hpp"
+#include "shaders/shader.hpp"
+#include "board.hpp"
+#include "builder.hpp"
+
+class Controller;
 
 #define WINDOW_BASE_WIDTH 800
 #define WINDOW_BASE_HEIGHT 600
@@ -21,7 +29,7 @@ class View
          * Render the game board
          * @param is3D Whether to render in 3D or 2D
          */
-        void viewBoard( bool is3D );
+        void viewBoard();
         /**
          * Render the winning screen
          * @param is3D Whether to render in 3D or 2D
@@ -29,6 +37,10 @@ class View
          */
         void winner( bool is3D, int p );
     
+        GLFWwindow* getWindow();
+
+        void processInput(GLFWwindow *window);
+
     private :
         /**
          * The singleton instance of the View
@@ -86,6 +98,24 @@ class View
          */
         void debugMat( glm::mat2 m ) const noexcept;
 
+        std::unique_ptr<Shader> s_;
+        std::unique_ptr<Mesh> m_;
+
+        int cursorX_;
+        int cursorY_;
+
+        int lockX_;
+        int lockY_;
+        bool lock_;
+        Builder* lockBuilder_;
+
+        bool keyUpPressed_;
+        bool keyDownPressed_;
+        bool keyRightPressed_;
+        bool keyLeftPressed_;
+        bool keyEnterPressed_;
+
+        Board* b_;
 };
 
 #endif

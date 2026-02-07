@@ -14,7 +14,7 @@ class Builder {
         /**
          * Create a builder
          */
-        Builder(int x, int y);
+        Builder(int x, int y, int player);
 
         /**
          * Get the position of the builder

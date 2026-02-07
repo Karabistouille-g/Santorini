@@ -17,7 +17,7 @@ find_package(OpenGL REQUIRED)
 # View libraries
 add_library(glad lib/glad/glad.c)
 add_library(shader src/shader.cpp)
-add_library(view src/view.cpp)
+add_library(view src/view.cpp src/mesh.cpp)
 # Model libraries
 add_library(board src/board.cpp)
 add_library(builder src/builder.cpp)

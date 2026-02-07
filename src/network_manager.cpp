@@ -4,6 +4,7 @@
 #include <unistd.h>     // close
 #include <sys/socket.h> // socket, bind, listen...
 #include <arpa/inet.h>  // inet_addr
+#include <fcntl.h>
 
 namespace santorini {
 
@@ -85,6 +86,8 @@ bool NetworkManager::connectToClient(const std::string& ip, int port) {
 
     // En mode client le socket de communication est le socket principal
     connectionFd_ = socketFd_;
+    int flags = fcntl(connectionFd_, F_GETFL, 0);
+    fcntl(connectionFd_, F_SETFL, flags | O_NONBLOCK);
     isServer_ = false;
     connected_ = true;
     std::cout << "[Network] Connected to server!" << std::endl;
@@ -107,12 +110,19 @@ std::optional<Packet> NetworkManager::receivePacket() {
 
     if (valread > 0) {
         return pkt;
-    } else {
-        // 0 = déconnexion, -1 = erreur
-        std::cout << "[Network] Connection lost." << std::endl;
+    } 
+    else if (valread < 0) {
+        if (errno == EAGAIN || errno == EWOULDBLOCK) {
+            return std::nullopt;
+        }
         connected_ = false;
         return std::nullopt;
-    }
+    } 
+    else {
+        std::cout << "[Network] Connection closed by peer." << std::endl;
+        connected_ = false;
+        return std::nullopt;
+    }   
 }
 
 bool NetworkManager::isConnected() const {

@@ -4,7 +4,7 @@
 
 #include <iostream>
 
-Builder::Builder(int x, int y) {
+Builder::Builder(int x, int y, int player) : player_(player) {
     b_ = Board::getInstance();
     position_ = b_->getCase(x, y);
     position_->setBuilder(this);

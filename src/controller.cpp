@@ -88,7 +88,6 @@ bool Controller::selectBuild(int pawnId, int x, int y) {
             net_->sendPacket(p);
             isMyTurn_ = false;
             std::cout << "--- END OF TURN (Waiting for opponent) ---" << std::endl;
-            View::getInstance().viewBoard(false);
         }
         return true;
     } else {
@@ -102,6 +101,7 @@ void Controller::processNetwork() {
 
     auto pktOpt = net_->receivePacket();
     if (pktOpt.has_value()) {
+
         Packet p = pktOpt.value();
         int enemyId = (myPlayerId_ == 0) ? 1 : 0;
         Builder* enemyPawn = model_->getPawn(enemyId, p.workerId);
