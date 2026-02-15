@@ -14,7 +14,7 @@ class Builder {
         /**
          * Create a builder
          */
-        Builder(int x, int y, int player);
+        Builder(int x, int y, int player, int id);
 
         /**
          * Get the position of the builder
@@ -33,6 +33,8 @@ class Builder {
 
         int getPlayer();
 
+        int getId();
+
         void undoMove();
 
         void undoBuild();
@@ -42,6 +44,7 @@ class Builder {
         Board* b_; 
         Case* position_;
         int player_; 
+        int id_;
         std::stack<Case*> moves_;
         std::stack<Case*> builds_;
 

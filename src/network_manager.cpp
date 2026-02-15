@@ -56,6 +56,9 @@ bool NetworkManager::startServer(int port) {
         return false;
     }
 
+    int flags = fcntl(connectionFd_, F_GETFL, 0);
+    fcntl(connectionFd_, F_SETFL, flags | O_NONBLOCK);
+
     std::cout << "[Network] Client connected!" << std::endl;
     isServer_ = true;
     connected_ = true;

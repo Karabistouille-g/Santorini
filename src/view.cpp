@@ -2,9 +2,8 @@
 #include "case.hpp"
 #include <iostream>
 #include <glm/gtc/matrix_transform.hpp>
-#include "controller.hpp"
 
-View::View() : cursorX_(2), cursorY_(2), lockX_(-1), lockY_(-1), lock_(false), lockBuilder_(nullptr), keyUpPressed_(false), keyDownPressed_(false), keyRightPressed_(false), keyLeftPressed_(false), b_(Board::getInstance())
+View::View() : cursorX_(2), cursorY_(2), lockX_(-1), lockY_(-1), lock_(false), build_(false), win_(false), lockBuilder_(nullptr), keyUpPressed_(false), keyDownPressed_(false), keyRightPressed_(false), keyLeftPressed_(false), b_(Board::getInstance())
 {
     // // Initialize GLFW
     if( !glfwInit() )
@@ -94,6 +93,10 @@ void View::viewBoard()
     s_->setMat4("view", view);
 
     float spacing = 0.25f;
+
+    if (win_) {
+        winner(false, 0);
+    }
     
     for( int x = 0; x < 5; x++ )
     {
@@ -105,20 +108,20 @@ void View::viewBoard()
             float posX = (x - 2.0f) * spacing;
             float posY = (y - 2.0f) * spacing;
             
-            model = glm::translate(model, glm::vec3(posX, posY, 0.0f));
-            s_->setVec3("caseColor", 1.0f / floor, 1.0f / floor, 1.0f / floor);
+            model = glm::translate(model, glm::vec3(posX, posY, 0.01f));
+            s_->setVec3("caseColor", 0.2f * floor + 0.2f, 0.2f * floor + 0.2f, 0.2f * floor + 0.2f);
             s_->setMat4("model", model);
 
             m_->draw(*s_);
 
             if (b_->getCase(x, y)->getBuilder()) {
-                model = glm::translate(model, glm::vec3(0.0f, 0.0f, 0.01f));
+                model = glm::translate(model, glm::vec3(0.0f, 0.0f, 0.015f));
                 model = glm::scale(model, glm::vec3(0.5f, 0.5f, 1.0f));
 
-                if (b_->getCase(x, y)->getBuilder()->getPlayer() == 1) {
+                if (b_->getCase(x, y)->getBuilder()->getPlayer() == 0) {
                     s_->setVec3("caseColor", 1.0f, 0.0f, 0.0f);
                 }
-                if (b_->getCase(x, y)->getBuilder()->getPlayer() == 2) {
+                if (b_->getCase(x, y)->getBuilder()->getPlayer() == 1) {
                     s_->setVec3("caseColor", 0.0f, 0.0f, 1.0f);
                 }
                 s_->setMat4("model", model);
@@ -126,24 +129,26 @@ void View::viewBoard()
                 m_->draw(*s_);
             }
 
+            // Case du curseur
             if (x == cursorX_ && y == cursorY_) {
                 glm::mat4 cursorModel = glm::mat4(1.0f);
-                cursorModel = glm::translate(cursorModel, glm::vec3(posX, posY, -0.001f));
+                cursorModel = glm::translate(cursorModel, glm::vec3(posX, posY, 0.0015f));
                 cursorModel = glm::scale(cursorModel, glm::vec3(1.1f, 1.1f, 1.0f)); 
                 s_->setVec3("caseColor", 1.0f, 0.50f, 0.39f);
                 s_->setMat4("model", cursorModel);
                 m_->draw(*s_);
             }
 
+            // Case de séléction
             if (x == lockX_ && y == lockY_) {
                 glm::mat4 cursorModel = glm::mat4(1.0f);
-                cursorModel = glm::translate(cursorModel, glm::vec3(posX, posY, -0.0001f));
+                cursorModel = glm::translate(cursorModel, glm::vec3(posX, posY, 0.001f));
                 cursorModel = glm::scale(cursorModel, glm::vec3(1.1f, 1.1f, 1.0f)); 
                 s_->setVec3("caseColor", 1.0f, 0.0f, 0.0f);
                 s_->setMat4("model", cursorModel);
                 m_->draw(*s_);
 
-                // Affichage des cases possible
+                // Case possible
                 for (int i = -1; i <= 1; i++) {
                     for (int j = -1; j <= 1; j++) {
                         if (i == 0 && j == 0) continue;
@@ -159,7 +164,7 @@ void View::viewBoard()
                             float pY = (targetY - 2.0f) * spacing;
                             
                             glm::mat4 moveModel = glm::mat4(1.0f);
-                            moveModel = glm::translate(moveModel, glm::vec3(pX, pY, -0.001f));
+                            moveModel = glm::translate(moveModel, glm::vec3(pX, pY, 0.001f));
                             moveModel = glm::scale(moveModel, glm::vec3(1.1f, 1.1f, 1.0f)); 
                             
                             s_->setVec3("caseColor", 0.0f, 1.0f, 0.0f); // Vert pour "possible"
@@ -188,7 +193,7 @@ GLFWwindow* View::getWindow() {
     return window_;
 }
 
-void View::processInput(GLFWwindow *window)
+void View::processInput(GLFWwindow *window, santorini::Controller &c)
 {
     if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
         glfwSetWindowShouldClose(window, true);
@@ -197,7 +202,6 @@ void View::processInput(GLFWwindow *window)
         if (!keyUpPressed_) {
             if (cursorY_ < 4) {
                 cursorY_++;
-                std::cout << "UP " << cursorY_ << std::endl;
             }
             keyUpPressed_ = true;
         }
@@ -209,7 +213,6 @@ void View::processInput(GLFWwindow *window)
         if (!keyDownPressed_) {
             if (cursorY_ > 0) {
                 cursorY_--;
-                std::cout << "DOWN " << cursorY_ << std::endl;
             } 
             keyDownPressed_ = true;
         }
@@ -221,7 +224,6 @@ void View::processInput(GLFWwindow *window)
         if (!keyRightPressed_) {
             if (cursorX_ < 4) {
                 cursorX_++;
-                std::cout << "RIGHT " << cursorX_ << std::endl;
             } 
             keyRightPressed_ = true;
         }
@@ -229,11 +231,10 @@ void View::processInput(GLFWwindow *window)
         keyRightPressed_ = false;
     }
 
-    if (glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS && lock_ == false) {
+    if (glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS) {
         if (!keyLeftPressed_) {
             if (cursorX_ > 0) {
                 cursorX_--;
-                std::cout << "LEFT " << cursorX_ << std::endl;
             } 
         keyLeftPressed_ = true;
         }
@@ -243,22 +244,37 @@ void View::processInput(GLFWwindow *window)
 
     if (glfwGetKey(window, GLFW_KEY_ENTER) == GLFW_PRESS) {
         if (!keyEnterPressed_) {
-            if (!lock_) { 
+            if (!lock_ && !build_) {
                 auto targetBuilder = b_->getCase(cursorX_, cursorY_)->getBuilder();
                 // On vérifie qu'il y a un builder et que c'est le nôtre
-                if (targetBuilder && targetBuilder->getPlayer() == 1) {
+                if (targetBuilder && targetBuilder->getPlayer() == c.getCurrentPlayer()) {
                     lockX_ = cursorX_;
                     lockY_ = cursorY_;
                     lockBuilder_ = targetBuilder;
-                    lock_ = true; // On passe à l'étape suivante
+                    lock_ = true;
                     std::cout << "PERSONNAGE SELECTIONNE" << std::endl;
                 }
             } 
-            else {
-                
-                lock_ = false;
-                lockBuilder_ = nullptr;
-                std::cout << "PERSONNAGE DEPLACE" << std::endl;
+            else if (lock_ && !build_) {
+                if (c.selectMove(lockBuilder_->getId(), cursorX_, cursorY_) == 1) {
+                    lockX_ = cursorX_;
+                    lockY_ = cursorY_;
+                    build_ = true;
+                    std::cout << "PERSONNAGE DEPLACE" << std::endl;
+                } else if (c.selectMove(lockBuilder_->getId(), cursorX_, cursorY_) == 2) {
+                    win_ = true;
+                }
+            }
+            else if (lock_ && build_) {
+                if (c.selectBuild(lockBuilder_->getId(), cursorX_, cursorY_)) {
+                    lockX_ = -1;
+                    lockY_ = -1;
+                    build_ = false;
+                    lock_ = false;
+                    lockBuilder_ = nullptr;
+                    std::cout << "BUILDING PLACE" << std::endl;
+                }
+
             }
             keyEnterPressed_ = true;
         }

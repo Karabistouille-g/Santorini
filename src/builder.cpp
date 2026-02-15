@@ -4,7 +4,7 @@
 
 #include <iostream>
 
-Builder::Builder(int x, int y, int player) : player_(player) {
+Builder::Builder(int x, int y, int player, int id) : player_(player), id_(id) {
     b_ = Board::getInstance();
     position_ = b_->getCase(x, y);
     position_->setBuilder(this);
@@ -53,6 +53,7 @@ bool Builder::createBuild(int x, int y) {
     std::cout << "Target floor before build: " << target->getFloor() << std::endl;
 
     if (target->getFloor() >= 4) return false;
+    if (target->getBuilder()) return false;
 
     std::cout << "Build successful" << std::endl;
 
@@ -83,6 +84,10 @@ bool Builder::validCase(Case* target) {
 
 int Builder::getPlayer() {
     return player_;
+}
+
+int Builder::getId() {
+    return id_;
 }
 
 void Builder::undoMove() {

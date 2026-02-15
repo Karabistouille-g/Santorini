@@ -37,11 +37,6 @@ int main(int argc, char* argv[]) {
         return -1;
     }
 
-    std::cout << "Main ligne 40" << std::endl;
-
-    char cmd;
-    int cpt = 0;
-    int id, x, y;
     View& view = View::getInstance();
     GLFWwindow* window = view.getWindow();
 
@@ -58,8 +53,6 @@ int main(int argc, char* argv[]) {
 
         glfwPollEvents();
         glfwSwapBuffers(window);
-
-        cpt++;
     }
 
     return 0;

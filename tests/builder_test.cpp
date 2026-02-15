@@ -5,7 +5,7 @@
 
 TEST(BuilderTest, Initilization) {
     Board* board = Board::getInstance();
-    Builder bob(2, 2, 1);
+    Builder bob(2, 2, 1, 0);
 
     Case* pos = bob.getPosition();
     ASSERT_NE(pos, nullptr);
@@ -15,7 +15,7 @@ TEST(BuilderTest, Initilization) {
 
 TEST(BuilderTest, MoveBuilderValid) {
     Board* board = Board::getInstance();
-    Builder bob(2, 2, 1);
+    Builder bob(2, 2, 1, 0);
 
     EXPECT_TRUE(bob.moveBuilder(2, 3));
     
@@ -29,7 +29,7 @@ TEST(BuilderTest, MoveBuilderValid) {
 
 TEST(BuilderTest, MoveBuidlerOwnPosition) {
     Board* board = Board::getInstance();
-    Builder bob(2, 2, 1);
+    Builder bob(2, 2, 1, 0);
 
     EXPECT_FALSE(bob.moveBuilder(2, 2));
     
@@ -43,7 +43,7 @@ TEST(BuilderTest, MoveBuidlerOwnPosition) {
 
 TEST(BuilderTest, MoveBuilderTooFar) {
     Board* board = Board::getInstance();
-    Builder bob(2, 2, 1);
+    Builder bob(2, 2, 1, 0);
 
     EXPECT_FALSE(bob.moveBuilder(4, 4));
     
@@ -57,7 +57,7 @@ TEST(BuilderTest, MoveBuilderTooFar) {
 
 TEST(BuilderTest, MoveBuilderTooHigh) {
     Board* board = Board::getInstance();
-    Builder bob(2, 2, 1);
+    Builder bob(2, 2, 1, 0);
     
     Case* target = board->getCase(2, 3);
     ASSERT_NE(target, nullptr);
@@ -77,7 +77,7 @@ TEST(BuilderTest, MoveBuilderTooHigh) {
 
 TEST(BuilderTest, MoveBuilderTooLowFirstFloor) {
     Board* board = Board::getInstance();
-    Builder bob(2, 2, 1);
+    Builder bob(2, 2, 1, 0);
 
     EXPECT_TRUE(bob.moveBuilder(2, 3));
     EXPECT_TRUE(bob.createBuild(2, 2));
@@ -98,7 +98,7 @@ TEST(BuilderTest, MoveBuilderTooLowFirstFloor) {
 
 TEST(BuilderTest, MoveBuilderTooLowSecondFloor) {
     Board* board = Board::getInstance();
-    Builder bob(2, 2, 1);
+    Builder bob(2, 2, 1, 0);
 
     EXPECT_TRUE(bob.moveBuilder(2, 3));
     EXPECT_TRUE(bob.createBuild(2, 2));
@@ -119,7 +119,7 @@ TEST(BuilderTest, MoveBuilderTooLowSecondFloor) {
 
 TEST(BuilderTest, MoveBuilderTooLowThirdFloor) {
     Board* board = Board::getInstance();
-    Builder bob(2, 2, 1);
+    Builder bob(2, 2, 1, 0);
 
     EXPECT_TRUE(bob.moveBuilder(2, 3));
     EXPECT_TRUE(bob.createBuild(2, 2));
@@ -143,7 +143,7 @@ TEST(BuilderTest, MoveBuilderTooLowThirdFloor) {
 
 TEST(BuilderTest, CreateBuildValid) {
     Board* board = Board::getInstance();
-    Builder bob(2, 2, 1);
+    Builder bob(2, 2, 1, 0);
 
     EXPECT_TRUE(bob.createBuild(2, 3));
     
@@ -157,7 +157,7 @@ TEST(BuilderTest, CreateBuildValid) {
 
 TEST(BuilderTest, CreateBuildOwnPosition) {
     Board* board = Board::getInstance();
-    Builder bob(2, 2, 1);
+    Builder bob(2, 2, 1, 0);
 
     EXPECT_FALSE(bob.createBuild(2, 2));
     
@@ -171,7 +171,7 @@ TEST(BuilderTest, CreateBuildOwnPosition) {
 
 TEST(BuilderTest, CreateBuildTooFar) {
     Board* board = Board::getInstance();
-    Builder bob(2, 2, 1);
+    Builder bob(2, 2, 1, 0);
 
     EXPECT_FALSE(bob.createBuild(4, 4));
     
@@ -184,7 +184,7 @@ TEST(BuilderTest, CreateBuildTooFar) {
 }
 
 TEST(CaseTest, setAndGetBuilder) {
-    Builder bob(2, 2, 1);
+    Builder bob(2, 2, 1, 0);
 
     Case cas = Case(3, 4);
     cas.setBuilder(&bob);

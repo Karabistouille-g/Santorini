@@ -11,8 +11,7 @@
 #include "shaders/shader.hpp"
 #include "board.hpp"
 #include "builder.hpp"
-
-class Controller;
+#include "controller.hpp"
 
 #define WINDOW_BASE_WIDTH 800
 #define WINDOW_BASE_HEIGHT 600
@@ -39,7 +38,7 @@ class View
     
         GLFWwindow* getWindow();
 
-        void processInput(GLFWwindow *window);
+        void processInput(GLFWwindow *window, santorini::Controller &c);
 
     private :
         /**
@@ -107,6 +106,8 @@ class View
         int lockX_;
         int lockY_;
         bool lock_;
+        bool build_;
+        bool win_;
         Builder* lockBuilder_;
 
         bool keyUpPressed_;

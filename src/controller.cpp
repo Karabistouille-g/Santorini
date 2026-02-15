@@ -18,7 +18,7 @@ Controller::~Controller() {}
 
 // On récupère le port ici
 int Controller::createGame(bool isOnline, bool isServer, const std::string& ip, int port) {
-    model_->startGame(1, 2); 
+    model_->startGame(0, 1); 
 
     isOnlineMode_ = isOnline;
 
@@ -43,30 +43,38 @@ int Controller::createGame(bool isOnline, bool isServer, const std::string& ip, 
     return 0;
 }
 
-bool Controller::selectMove(int pawnId, int x, int y) {
+int Controller::selectMove(int pawnId, int x, int y) {
+
+    std::cout << "Controller 1" << std::endl;
     if (isOnlineMode_ && !isMyTurn_) {
         std::cout << "[Game] Not your turn!" << std::endl;
-        return false;
+        return 0;
     }
 
+    std::cout << "Controller 2" << std::endl;
     Builder* pawn = model_->getPawn(myPlayerId_, pawnId);
     if (!pawn) {
         std::cout << "[Error] Pawn not found!" << std::endl;
-        return false;
+        return 0;
     }
 
+    std::cout << "Controller 3" << std::endl;
     bool success = pawn->moveBuilder(x, y);
-    
+    std::cout << "Controller 4" << std::endl;
+
     if (success) {
         std::cout << "[Game] Move Validated!" << std::endl;
         if (isOnlineMode_) {
             Packet p{ActionType::MOVE, pawnId, x, y};
             net_->sendPacket(p);
         }
-        return true;
+        if (model_->endGame()) {
+            return 2;
+        }
+        return 1;
     } else {
         std::cout << "[Game] Invalid Move (Check rules or collisions)" << std::endl;
-        return false;
+        return 0;
     }
 }
 
@@ -119,6 +127,10 @@ void Controller::processNetwork() {
             }
         }
     }
+}
+
+int Controller::getCurrentPlayer() {
+    return myPlayerId_;
 }
 
 }

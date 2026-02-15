@@ -20,10 +20,12 @@ public:
     // On ajoute le paramètre "port" ici (par défaut 5050)
     int createGame(bool isOnline, bool isServer, const std::string& ip = "", int port = 5050);
 
-    bool selectMove(int pawnId, int x, int y);
+    int selectMove(int pawnId, int x, int y);
     bool selectBuild(int pawnId, int x, int y);
     
     void processNetwork();
+
+    int getCurrentPlayer();
 
 private:
     std::unique_ptr<Model> model_;
