@@ -1,14 +1,10 @@
 #include "case.hpp"
 #include "builder.hpp"
 
-Case::Case(int x, int y) {
-    x_ = x;
-    y_ = y;
-    floor_ = 0;
-}
+Case::Case(int x, int y) : x_(x), y_(y), floor_(0), builder_(nullptr) {}
 
 int Case::getFloor() {
-    return floor_;
+    return floor_;  
 }
 
 int Case::getX() {

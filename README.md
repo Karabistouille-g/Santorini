@@ -1,6 +1,24 @@
 # Santorini
 Projet de l'année, le JOAT (jeu of all time)
 
+## Lancer le jeu
+```bash
+bash setup.sh
+cd build
+./santorini solo               # contre l'IA
+./santorini server             # multijoueur (hôte)
+./santorini client [IP] [PORT] # multijoueur (rejoindre)
+```
+| Touche | Action |
+|--------|--------|
+| Flèches | Déplacer le curseur |
+| Entrée | Sélectionner / Confirmer |
+| Z / W | Caméra haut |
+| S | Caméra bas |
+| Q / A | Caméra gauche |
+| D | Caméra droite |
+| Échap | Quitter |
+
 ## Dépendances
 CMake <br>
 Doxygen <br>

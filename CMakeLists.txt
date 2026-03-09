@@ -86,3 +86,8 @@ set_target_properties(tests
     CXX_STANDARD 17
     CXX_EXTENSIONS OFF
 )
+
+# Copie automatique du dossier sounds/ dans build/ apres chaque make
+if(EXISTS "${CMAKE_SOURCE_DIR}/sounds")
+    file(COPY "${CMAKE_SOURCE_DIR}/sounds" DESTINATION "${CMAKE_BINARY_DIR}")
+endif()
