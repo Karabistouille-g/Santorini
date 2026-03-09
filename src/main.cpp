@@ -82,14 +82,14 @@ int main(int argc, char* argv[]) {
 
     // --- MUSIQUE DE FOND EN BOUCLE ---
     if (audioInitialized) {
-        if (ma_sound_init_from_file(&audioEngine, "sounds/music.wav",
+        if (ma_sound_init_from_file(&audioEngine, "sounds/music.mp3",
             MA_SOUND_FLAG_STREAM, NULL, NULL, &bgMusic) == MA_SUCCESS) {
             ma_sound_set_looping(&bgMusic, MA_TRUE);   // boucle infinie
             ma_sound_set_volume(&bgMusic, 0.45f);      // volume doux en fond
             ma_sound_start(&bgMusic);
             bgMusicLoaded = true;
         } else {
-            std::cout << "[Audio] Musique de fond non trouvee (sounds/music.wav)" << std::endl;
+            std::cout << "[Audio] Musique de fond non trouvee (sounds/music.mp3)" << std::endl;
         }
     }
 

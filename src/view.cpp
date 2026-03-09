@@ -72,8 +72,11 @@ View::~View() { s_.reset(); m_.reset(); glfwDestroyWindow(window_); glfwTerminat
 View& View::getInstance() { static View instance; return instance; }
 
 void View::setWinner(int id) {
-    if (!win_) playSoundFX("sounds/win.wav");
-    win_ = true;
+    if (!win_) {
+        playSoundFX("sounds/win.wav");
+        winAnimStartTime_ = (float)glfwGetTime();
+    }
+    win_      = true;
     winnerId_ = id;
 }
 
@@ -437,7 +440,67 @@ void View::renderElement(const glm::vec3& position, const glm::vec3& scale,
     m_->draw(*s_);
 }
 
-void View::winner(bool is3D, int p) {}
+void View::winner(bool is3D, int p) {
+    // Toute la magie est dans viewBoard() (fond doré pulsant).
+    // Ici on ajoute les confettis/particules flottantes au-dessus du plateau.
+    if (!win_ || winAnimStartTime_ < 0.0f) return;
+
+    float t    = (float)glfwGetTime() - winAnimStartTime_;
+    float time = (float)glfwGetTime();
+
+    // Couleur gagnant
+    glm::vec3 winColor = (winnerId_ == 0)
+        ? glm::vec3(1.0f, 0.18f, 0.18f)   // rouge
+        : glm::vec3(0.25f, 0.45f, 1.0f);  // bleu
+
+    // --- Pions gagnants : rebond exagéré vers le haut ---
+    for (int x = 0; x < 5; x++) {
+        for (int y = 0; y < 5; y++) {
+            Builder* b = b_->getCase(x, y)->getBuilder();
+            if (!b || b->getPlayer() != winnerId_) continue;
+            int fl = b_->getCase(x, y)->getFloor();
+            float baseH = fl * 0.5f + 0.25f;
+            // Rebond sinusoïdal, amplitude décroissante avec le temps
+            float bounce = std::abs(std::sin(time * 4.5f + x)) * std::max(0.0f, 1.0f - t * 0.15f) * 2.0f;
+            // Emissive fort sur les gagnants
+            s_->setVec3("emissive", winColor.x, winColor.y, winColor.z);
+            s_->setFloat("emissiveStrength", 1.0f + 0.5f * std::sin(time * 8.0f));
+            renderPawn(glm::vec3((float)x, baseH + bounce, (float)y), winnerId_, false);
+            s_->setVec3("emissive", 0.0f, 0.0f, 0.0f);
+            s_->setFloat("emissiveStrength", 0.0f);
+        }
+    }
+
+    // --- Particules confettis (cubes colorés qui tombent) ---
+    // Seed fixe par index pour des trajectoires stables
+    static const int NUM_PARTICLES = 24;
+    for (int i = 0; i < NUM_PARTICLES; i++) {
+        float seed  = (float)i * 1.618f;
+        float orbitR = 1.5f + std::fmod(seed * 0.7f, 2.5f);
+        float speed  = 0.6f + std::fmod(seed * 0.3f, 1.0f);
+        float phase  = seed * 2.0f;
+        float height = 2.5f + std::sin(time * speed + phase) * 1.5f + t * 0.3f;
+        float cx     = 2.0f + orbitR * std::cos(time * speed * 0.8f + phase);
+        float cz     = 2.0f + orbitR * std::sin(time * speed * 0.8f + phase);
+
+        // Alterner entre couleur gagnant et or/blanc
+        glm::vec3 pColor;
+        int mod = i % 3;
+        if      (mod == 0) pColor = winColor;
+        else if (mod == 1) pColor = glm::vec3(1.0f, 0.85f, 0.0f);  // or
+        else               pColor = glm::vec3(1.0f, 1.0f, 1.0f);   // blanc
+
+        float pulse = 0.7f + 0.3f * std::sin(time * 3.0f + seed);
+        s_->setVec3("emissive", pColor.x * pulse, pColor.y * pulse, pColor.z * pulse);
+        s_->setFloat("emissiveStrength", 0.8f);
+        renderElement(glm::vec3(cx, height, cz),
+                      glm::vec3(0.08f, 0.08f, 0.08f),
+                      pColor, 0.9f,
+                      glm::vec3(time * 90.0f * speed, time * 60.0f * speed, 0.0f));
+    }
+    s_->setVec3("emissive", 0.0f, 0.0f, 0.0f);
+    s_->setFloat("emissiveStrength", 0.0f);
+}
 
 GLFWwindow* View::getWindow() { return window_; }
 
@@ -446,6 +509,21 @@ GLFWwindow* View::getWindow() { return window_; }
 // =============================================================================
 void View::processInput(GLFWwindow* window, santorini::Controller& c)
 {
+    // --- INTRO MULTI : afficher pendant 5s qui on est ---
+    if (c.isOnlineMode() && !introShown_) {
+        if (introStartTime_ < 0.0f) introStartTime_ = (float)glfwGetTime();
+        float elapsed = (float)glfwGetTime() - introStartTime_;
+        if (elapsed < 5.0f) {
+            std::string role  = (c.getCurrentPlayer() == 0) ? "ROUGE (Joueur 1)" : "BLEU (Joueur 2)";
+            std::string order = (c.getCurrentPlayer() == 0) ? "vous commencez" : "l'adversaire commence";
+            std::string msg   = "Santorini  |  Vous etes : " + role + "  —  " + order
+                              + "  (" + std::to_string(5 - (int)elapsed) + "s)";
+            glfwSetWindowTitle(window, msg.c_str());
+            return;
+        }
+        introShown_ = true;
+    }
+
     if (win_) {
         std::string winnerName = c.getPlayerName(winnerId_);
         std::string title = "✦ VICTOIRE DE " + winnerName + " ✦  (Echap / Q / A pour quitter)";

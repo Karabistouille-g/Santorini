@@ -3,6 +3,7 @@
 #include <memory>
 #include <string>
 #include <vector>
+#include <atomic>
 
 //Sortie du namespace pour éviter le conflit "incomplete type"
 class Model;
@@ -53,6 +54,8 @@ private:
     bool isMyTurn_;
     int myPlayerId_; // 0 ou 1
     int aiDifficulty_;
+    std::atomic<bool> networkReady_{false};
+    std::atomic<bool> aiThinking_{false};
     
     std::string playerNames_[2]; // Stockage des noms
 };

@@ -48,29 +48,11 @@ bool Builder::moveBuilder(int x, int y) {
     return true;
 }
 
-bool Builder::createBuild(int x, int y) {
-    if (x < 0 || x >= 5 || y < 0 || y >= 5) return false;
-    std::cout << getPosition()->getX() << "," << getPosition()->getY() << " -> " << x << "," << y << std::endl;
 
-    Case* target = b_->getCase(x, y);
-    if (!validCase(target)) return false;
-
-    std::cout << "Target floor before build: " << target->getFloor() << std::endl;
-
-    if (target->getFloor() >= 4) return false;
-    if (target->getBuilder()) return false;
-
-    std::cout << "Build successful" << std::endl;
-
-    target->addFloor();
-    builds_.push(target);
-    return true;
-}
 
 bool Builder::validCase(Case* target) {
     
-    std::cout << "Avant le crash" << target->getFloor() << std::endl;
-
+    
     int curX = position_->getX();
     int curY = position_->getY();
 

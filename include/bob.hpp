@@ -34,6 +34,7 @@ private:
     int score();
     int minimax(int depth, int alpha, int beta, bool maximizing);
     int countMoves(Builder* b);
+    int quickEval(int nx, int ny, bool maximizing);
 };
 
 #endif

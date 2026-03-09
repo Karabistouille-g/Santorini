@@ -95,6 +95,14 @@ class View
         // --- NOUVEAU : Flag pour gerer le son d'upgrade ---
         bool buildUpgradeSoundPlayed_ = false;
 
+        // --- Animation victoire ---
+        float winAnimStartTime_ = -1.0f;
+        bool  winSoundPlayed_   = false;
+
+        // --- Ecran d'intro multi (qui suis-je) ---
+        float introStartTime_    = -1.0f;
+        bool  introShown_        = false;
+
         void triggerMoveAnimation(int sx, int sy, int ex, int ey, int sFloor, int eFloor, Builder* b);
         void triggerBuildAnimation(int x, int y, int floor);
         

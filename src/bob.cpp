@@ -46,13 +46,50 @@ int Bob::score() {
         }
     }
     else if (difficulty_ == 2) {
+        Board* board = Board::getInstance();
         for (int i = 0; i < 2; i++) {
             if (!iaBuilders[i]) continue;
             int x = iaBuilders[i]->getPosition()->getX();
             int y = iaBuilders[i]->getPosition()->getY();
             int h = iaBuilders[i]->getPosition()->getFloor();
-            totalScore += h * 30;
-            if (x >= 1 && x <= 3 && y >= 1 && y <= 3) totalScore += 10;
+            totalScore += h * 50;
+            if (x >= 1 && x <= 3 && y >= 1 && y <= 3) totalScore += 15;
+
+            // Bonus sur les bâtiments adjacents :
+            // L'IA doit valoriser les tours hautes PRÈS D'ELLE,
+            // car c'est ce qu'elle va gravir pour gagner.
+            //   adj lvl 1 libre → +15  (matériau de base, peut devenir lvl 2)
+            //   adj lvl 2 libre → +60  (peut construire lvl 3 dessus)
+            //   adj lvl 2 libre + elle est lvl 1 → +150  (plan sur 2 coups : build lvl3 puis monte)
+            //   adj lvl 3 libre + elle est lvl 2 → +500  (menace de victoire immédiate)
+            for (int dx = -1; dx <= 1; dx++) {
+                for (int dy = -1; dy <= 1; dy++) {
+                    if (dx == 0 && dy == 0) continue;
+                    int nx = x + dx, ny = y + dy;
+                    if (nx < 0 || nx >= 5 || ny < 0 || ny >= 5) continue;
+                    Case* nc = board->getCase(nx, ny);
+                    int   nf = nc->getFloor();
+                    bool  free = (nc->getBuilder() == nullptr);
+                    if (!free) continue;
+
+                    if (nf == 1) totalScore += 15;
+                    if (nf == 2) totalScore += 60;
+                    if (nf == 2 && h == 1) totalScore += 150;
+                    if (nf == 3 && h == 2) totalScore += 500;
+                }
+            }
+
+            // Bloquer l'adversaire s'il est sur niveau 2
+            for (int j = 0; j < 2; j++) {
+                if (!playerBuilders[j]) continue;
+                int px = playerBuilders[j]->getPosition()->getX();
+                int py = playerBuilders[j]->getPosition()->getY();
+                int ph = playerBuilders[j]->getPosition()->getFloor();
+                if (ph == 2) {
+                    int dist = std::max(abs(x - px), abs(y - py));
+                    if (dist <= 1) totalScore += 80;
+                }
+            }
         }
     }
     else {
@@ -92,170 +129,168 @@ int Bob::countMoves(Builder* builder) {
 }
 
 // =============================================================================
-// MINIMAX CORRIGÉ
-// BUG CRITIQUE ORIGINAL : le return après élagage alpha-beta ne appelait jamais
-// undoMove(), ce qui corrompait le plateau et causait crashes/résultats erronés.
-// Fix : utiliser un flag "cutoff" pour sortir des boucles internes, puis toujours
-// appeler undoMove() avant de retourner.
+// MOVE ORDERING : score rapide pour trier les destinations avant de recurser.
+// =============================================================================
+int Bob::quickEval(int nx, int ny, bool maximizing) {
+    Case* target = b->getCase(nx, ny);
+    if (!target) return 0;
+    int s = target->getFloor() * (maximizing ? 30 : -30);
+    if (maximizing  && target->getFloor() == 3) return 9000;
+    if (!maximizing && target->getFloor() == 3) return -9000;
+    for (int dx = -1; dx <= 1; dx++) {
+        for (int dy = -1; dy <= 1; dy++) {
+            if (dx == 0 && dy == 0) continue;
+            int ax = nx+dx, ay = ny+dy;
+            if (ax < 0 || ax >= 5 || ay < 0 || ay >= 5) continue;
+            Case* adj = b->getCase(ax, ay);
+            if (adj && !adj->getBuilder())
+                s += adj->getFloor() * (maximizing ? 8 : -8);
+        }
+    }
+    return s;
+}
+
+// =============================================================================
+// MINIMAX — boucles imbriquées classiques + move ordering sur les destinations.
+//
+// POURQUOI ce n'est plus une liste plate :
+// L'ancienne version générait (move, build) en une seule liste et appelait
+// moveBuilder plusieurs fois pour la même destination. Si une iteration
+// laissait la stack moves_ dans un état inattendu, les appels suivants
+// à undoMove pouvaient vider la stack → top() sur stack vide → UB →
+// position_ corrompu → segfault dans validCase.
+//
+// Ici : un seul moveBuilder/undoMove par destination, les builds sont
+// traités dans la boucle intérieure. La stack est toujours équilibrée.
 // =============================================================================
 int Bob::minimax(int depth, int alpha, int beta, bool maximizing) {
     if (depth == 0) return score();
 
-    if (maximizing) {
-        int maxEval = -100000;
+    Builder* iaArr[2]     = {iaBuilderFirst,     iaBuilderSecond};
+    Builder* playerArr[2] = {playerBuilderFirst, playerBuilderSecond};
+    Builder** builders    = maximizing ? iaArr : playerArr;
 
-        for (Builder* builder : {iaBuilderFirst, iaBuilderSecond}) {
-            if (!builder) continue;
+    // --- Collecter et trier les destinations (move ordering) ---
+    struct Dest { Builder* builder; int nx, ny; int h; };
+    std::vector<Dest> dests;
+    dests.reserve(32);
 
-            Case* pos = builder->getPosition();
-            int x = pos->getX(), y = pos->getY();
-
-            for (int dx = -1; dx <= 1; dx++) {
-                for (int dy = -1; dy <= 1; dy++) {
-                    if (dx == 0 && dy == 0) continue;
-
-                    if (builder->moveBuilder(x + dx, y + dy)) {
-
-                        // Victoire immédiate détectée → pas besoin de construire
-                        if (builder->getPosition()->getFloor() == 3) {
-                            builder->undoMove();
-                            return 20000;
-                        }
-
-                        Case* newPos = builder->getPosition();
-                        int nx = newPos->getX(), ny = newPos->getY();
-
-                        bool cutoff = false;
-                        for (int bx = -1; bx <= 1 && !cutoff; bx++) {
-                            for (int by = -1; by <= 1 && !cutoff; by++) {
-                                if (bx == 0 && by == 0) continue;
-
-                                if (builder->createBuild(nx + bx, ny + by)) {
-                                    int eval = minimax(depth - 1, alpha, beta, false);
-                                    maxEval = std::max(maxEval, eval);
-                                    alpha  = std::max(alpha, eval);
-                                    builder->undoBuild();
-                                    if (beta <= alpha) cutoff = true;
-                                }
-                            }
-                        }
-
-                        // TOUJOURS annuler le déplacement avant de retourner
-                        builder->undoMove();
-                        if (cutoff) return maxEval;
-                    }
-                }
-            }
-        }
-        return (maxEval == -100000) ? -20000 : maxEval;
-    }
-    else {
-        int minEval = 100000;
-
-        for (Builder* builder : {playerBuilderFirst, playerBuilderSecond}) {
-            if (!builder) continue;
-
-            Case* pos = builder->getPosition();
-            int x = pos->getX(), y = pos->getY();
-
-            for (int dx = -1; dx <= 1; dx++) {
-                for (int dy = -1; dy <= 1; dy++) {
-                    if (dx == 0 && dy == 0) continue;
-
-                    if (builder->moveBuilder(x + dx, y + dy)) {
-
-                        // Le joueur gagne → retour immédiat
-                        if (builder->getPosition()->getFloor() == 3) {
-                            builder->undoMove();
-                            return -20000;
-                        }
-
-                        Case* newPos = builder->getPosition();
-                        int nx = newPos->getX(), ny = newPos->getY();
-
-                        bool cutoff = false;
-                        for (int bx = -1; bx <= 1 && !cutoff; bx++) {
-                            for (int by = -1; by <= 1 && !cutoff; by++) {
-                                if (bx == 0 && by == 0) continue;
-
-                                if (builder->createBuild(nx + bx, ny + by)) {
-                                    int eval = minimax(depth - 1, alpha, beta, true);
-                                    minEval = std::min(minEval, eval);
-                                    beta    = std::min(beta, eval);
-                                    builder->undoBuild();
-                                    if (beta <= alpha) cutoff = true;
-                                }
-                            }
-                        }
-
-                        // TOUJOURS annuler le déplacement avant de retourner
-                        builder->undoMove();
-                        if (cutoff) return minEval;
-                    }
-                }
-            }
-        }
-        return (minEval == 100000) ? 20000 : minEval;
-    }
-}
-
-void Bob::playTurn() {
-    int depth;
-    if      (difficulty_ == 3) depth = 5;
-    else if (difficulty_ == 2) depth = 3;
-    else                       depth = 1;
-
-    std::cout << "[IA] Bob crash ici 1.1" << std::endl;
-
-    int bestScore = -100000;
-    MoveInfo bestMove;
-    Builder* bestBuilder = nullptr;
-
-    for (Builder* builder : {iaBuilderFirst, iaBuilderSecond}) {
-        std::cout << "[IA] Bob crash ici 1.2" << std::endl;
+    for (int bi = 0; bi < 2; bi++) {
+        Builder* builder = builders[bi];
         if (!builder) continue;
-        Case* pos = builder->getPosition();
-        int x = pos->getX(), y = pos->getY();
+        int x        = builder->getPosition()->getX();
+        int y        = builder->getPosition()->getY();
+        int curFloor = builder->getPosition()->getFloor();
 
         for (int dx = -1; dx <= 1; dx++) {
             for (int dy = -1; dy <= 1; dy++) {
                 if (dx == 0 && dy == 0) continue;
-                std::cout << "[IA] Bob crash ici 1.3" << std::endl;
-                std::cout << " " << x << " " << dx << " " << y << " " << dy << std::endl;
-                if (builder->moveBuilder(x + dx, y + dy)) {
-                    std::cout << "[IA] Bob crash ici 1.4" << std::endl;
-                    // Victoire immédiate → on joue tout de suite
-                    if (builder->getPosition()->getFloor() == 3) {
-                        std::cout << "[IA] Bob crash ici 1.5" << std::endl;
-                        bestScore   = 20000;
-                        bestMove    = {x + dx, y + dy, x + dx, y + dy, 20000};
-                        bestBuilder = builder;
-                        builder->undoMove();
-                        goto applyMove;
-                    }
+                int nx = x+dx, ny = y+dy;
+                if (nx < 0 || nx >= 5 || ny < 0 || ny >= 5) continue;
+                Case* mc = b->getCase(nx, ny);
+                if (!mc || mc->getBuilder() || mc->getFloor() >= 4) continue;
+                if (mc->getFloor() > curFloor + 1) continue;
+                dests.push_back({builder, nx, ny, quickEval(nx, ny, maximizing)});
+            }
+        }
+    }
 
-                    Case* newPos = builder->getPosition();
-                    int nx = newPos->getX(), ny = newPos->getY();
-                    std::cout << "[IA] Bob crash ici 1.6" << std::endl;
-                    for (int bx = -1; bx <= 1; bx++) {
-                        for (int by = -1; by <= 1; by++) {
-                            if (bx == 0 && by == 0) continue;
-                            std::cout << "[IA] Bob crash ici 1.7" << std::endl;
-                            if (builder->createBuild(nx + bx, ny + by)) {
-                                int eval = minimax(depth - 1, -100000, 100000, false);
-                                if (eval > bestScore) {
-                                    bestScore   = eval;
-                                    bestMove    = {nx, ny, nx + bx, ny + by, eval};
-                                    bestBuilder = builder;
-                                    std::cout << "[IA] Bob crash ici 1.8" << std::endl;
-                                }
-                                builder->undoBuild();
-                            }
-                        }
-                    }
+    if (dests.empty()) return maximizing ? -20000 : 20000;
+
+    if (maximizing)
+        std::sort(dests.begin(), dests.end(), [](const Dest& a, const Dest& b){ return a.h > b.h; });
+    else
+        std::sort(dests.begin(), dests.end(), [](const Dest& a, const Dest& b){ return a.h < b.h; });
+
+    int best = maximizing ? -100000 : 100000;
+
+    for (auto& dest : dests) {
+        // --- UN SEUL moveBuilder par destination ---
+        if (!dest.builder->moveBuilder(dest.nx, dest.ny)) continue;
+
+        // Victoire immédiate
+        if (dest.builder->getPosition()->getFloor() == 3) {
+            dest.builder->undoMove();
+            return maximizing ? 20000 : -20000;
+        }
+
+        // --- Boucle interne sur les constructions ---
+        bool cutoff = false;
+        for (int bx = -1; bx <= 1 && !cutoff; bx++) {
+            for (int by = -1; by <= 1 && !cutoff; by++) {
+                if (bx == 0 && by == 0) continue;
+                int cbx = dest.nx+bx, cby = dest.ny+by;
+                if (cbx < 0 || cbx >= 5 || cby < 0 || cby >= 5) continue;
+                if (!dest.builder->createBuild(cbx, cby)) continue;
+
+                int eval = minimax(depth - 1, alpha, beta, !maximizing);
+                dest.builder->undoBuild();
+
+                if (maximizing) { best = std::max(best, eval); alpha = std::max(alpha, eval); }
+                else            { best = std::min(best, eval); beta  = std::min(beta,  eval); }
+                if (beta <= alpha) cutoff = true;
+            }
+        }
+
+        // --- UN SEUL undoMove, toujours appelé ---
+        dest.builder->undoMove();
+
+        if (cutoff) break;
+    }
+    return best;
+}
+
+void Bob::playTurn() {
+    // lvl1=depth1, lvl2=depth3, lvl3=depth5
+    // Avec move ordering depth 5 est viable (~0.3-0.8s) là où l'ancien freezait
+    int depth;
+    if      (difficulty_ == 3) depth = 4;
+    else if (difficulty_ == 2) depth = 3;
+    else                       depth = 1;
+
+    int bestScore = -100000;
+    MoveInfo bestMove{};
+    Builder* bestBuilder = nullptr;
+
+    for (Builder* builder : {iaBuilderFirst, iaBuilderSecond}) {
+        if (!builder) continue;
+        int x = builder->getPosition()->getX();
+        int y = builder->getPosition()->getY();
+
+        for (int dx = -1; dx <= 1; dx++) {
+            for (int dy = -1; dy <= 1; dy++) {
+                if (dx == 0 && dy == 0) continue;
+                if (!builder->moveBuilder(x + dx, y + dy)) continue;
+
+                if (builder->getPosition()->getFloor() == 3) {
+                    int nx = builder->getPosition()->getX();
+                    int ny = builder->getPosition()->getY();
+                    bestMove    = {nx, ny, nx, ny, 20000};
+                    bestBuilder = builder;
+                    bestScore   = 20000;
                     builder->undoMove();
+                    goto applyMove;
                 }
-                std::cout << "[IA] Bob crash ici 1.9" << std::endl;
+
+                int nx = builder->getPosition()->getX();
+                int ny = builder->getPosition()->getY();
+
+                for (int bx = -1; bx <= 1; bx++) {
+                    for (int by = -1; by <= 1; by++) {
+                        if (bx == 0 && by == 0) continue;
+                        int cbx2 = nx+bx, cby2 = ny+by;
+                        if (cbx2 < 0 || cbx2 >= 5 || cby2 < 0 || cby2 >= 5) continue;
+                        if (!builder->createBuild(cbx2, cby2)) continue;
+                        int eval = minimax(depth - 1, -100000, 100000, false);
+                        if (eval > bestScore) {
+                            bestScore   = eval;
+                            bestMove    = {nx, ny, nx+bx, ny+by, eval};
+                            bestBuilder = builder;
+                        }
+                        builder->undoBuild();
+                    }
+                }
+                builder->undoMove();
             }
         }
     }
@@ -263,9 +298,24 @@ void Bob::playTurn() {
 applyMove:
     if (bestBuilder) {
         bestBuilder->moveBuilder(bestMove.moveX, bestMove.moveY);
-        // Si victoire immédiate, pas de construction
-        if (bestScore < 20000) {
+        if (bestScore < 20000)
             bestBuilder->createBuild(bestMove.buildX, bestMove.buildY);
-        }
     }
+}bool Builder::createBuild(int x, int y) {
+    if (x < 0 || x >= 5 || y < 0 || y >= 5) return false;
+    std::cout << getPosition()->getX() << "," << getPosition()->getY() << " -> " << x << "," << y << std::endl;
+
+    Case* target = b_->getCase(x, y);
+    if (!validCase(target)) return false;
+
+    std::cout << "Target floor before build: " << target->getFloor() << std::endl;
+
+    if (target->getFloor() >= 4) return false;
+    if (target->getBuilder()) return false;
+
+    std::cout << "Build successful" << std::endl;
+
+    target->addFloor();
+    builds_.push(target);
+    return true;
 }
