@@ -5,6 +5,7 @@
 #include <case.hpp>
 #include <builder.hpp>
 #include <vector>
+#include <algorithm>
 
 struct MoveInfo {
     int moveX, moveY;
@@ -14,28 +15,25 @@ struct MoveInfo {
 
 class Bob {
 
-    public:
-        
-        Bob();
+public:
+    Bob(int difficulty = 2);   // 1 = facile, 2 = normal, 3 = difficile
+    void playTurn();
 
-        void playTurn();
+private:
 
+    Board* b;
 
-    private:
+    Builder* iaBuilderFirst;
+    Builder* iaBuilderSecond;
 
-        Board* b;
-        
-        // Builder de l'IA
-        Builder* iaBuilderFirst;
-        Builder* iaBuilderSecond;
+    Builder* playerBuilderFirst;
+    Builder* playerBuilderSecond;
 
-        // Builder du joueur
-        Builder* playerBuilderFirst;
-        Builder* playerBuilderSecond;
+    int difficulty_;
 
-        int score();
-
-        int minimax(int h, bool isMaximizing);
+    int score();
+    int minimax(int depth, int alpha, int beta, bool maximizing);
+    int countMoves(Builder* b);
 };
 
 #endif

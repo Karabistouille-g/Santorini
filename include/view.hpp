@@ -19,82 +19,34 @@
 class View
 {
     public :
-        /**
-         * Get the singleton instance of the View
-         * @return The View instance
-         */
         static View & getInstance();
-        /**
-         * Render the game board
-         * @param is3D Whether to render in 3D or 2D
-         */
         void viewBoard();
-        /**
-         * Render the winning screen
-         * @param is3D Whether to render in 3D or 2D
-         * @param p The winning player
-         */
         void winner( bool is3D, int p );
+
+        // --- Gestion du gagnant ---
+        void setWinner(int id);
+        void setWin(bool value) { win_ = value; }
+        bool isWon() const { return win_; }
+        int getWinnerId() const { return winnerId_; }
     
         GLFWwindow* getWindow();
-
         void processInput(GLFWwindow *window, santorini::Controller &c);
 
     private :
-        /**
-         * The singleton instance of the View
-         */
         static View & instance_;
-        /**
-         * The GLFW window
-         */
         GLFWwindow * window_;
 
-        /**
-         * Constructor
-         * Initializes the window, OpenGL and necessary libraries
-         */
         View();
-        /**
-         * Destructor
-         * Cleans up and closes the window
-         */
         ~View();
 
-        /**
-         * There are no copy or move constructors and assignements due to being a Singleton
-         */
         View( const View & ) = delete;
         View & operator=( const View & ) = delete;
         View( View && ) = delete;
         View & operator=( View && ) = delete;
 
-        ///////////////////////////////////////
-        //        Debugging functions        //
-        ///////////////////////////////////////
-
-        /**
-         * Check for OpenGL errors and print them to stderr
-         * Source : https://learnopengl.com/In-Practice/Debugging
-         * @param file The file where the error check is called (default: current file)
-         * @param line The line where the error check is called (default: current line)
-         * @return The last error code
-         */
         GLenum glCheckError( const char * file = __FILE__, int line = __LINE__ ) const noexcept;
-        /**
-         * Print a 4x4 matrix to stdout for debugging
-         * @param m The matrix to print
-         */
         void debugMat( glm::mat4 m ) const noexcept;
-        /**
-         * Print a 3x3 matrix to stdout for debugging
-         * @param m The matrix to print
-         */
         void debugMat( glm::mat3 m ) const noexcept;
-        /**
-         * Print a 2x2 matrix to stdout for debugging
-         * @param m The matrix to print
-         */
         void debugMat( glm::mat2 m ) const noexcept;
 
         std::unique_ptr<Shader> s_;
@@ -108,6 +60,8 @@ class View
         bool lock_;
         bool build_;
         bool win_;
+        int winnerId_; 
+
         Builder* lockBuilder_;
 
         bool keyUpPressed_;
@@ -117,6 +71,35 @@ class View
         bool keyEnterPressed_;
 
         Board* b_;
+
+        float camAngle_ = 45.0f; 
+        float camElevation_ = 35.0f;
+        float camRadius_ = 9.0f;
+        
+        bool firstFrame_ = true;
+        int prevFloors_[5][5];
+        Builder* prevBuilderPos_[5][5];
+
+        bool moveAnimActive_ = false;
+        float moveAnimStartTime_ = 0.0f;
+        int moveAnimStartX_ = 0, moveAnimStartY_ = 0;
+        int moveAnimEndX_ = 0, moveAnimEndY_ = 0;
+        int moveAnimStartFloor_ = 0, moveAnimEndFloor_ = 0;
+        Builder* movingBuilder_ = nullptr;
+
+        bool buildAnimActive_ = false;
+        float buildAnimStartTime_ = 0.0f;
+        int buildAnimX_ = 0, buildAnimY_ = 0;
+        int buildAnimFloor_ = 0;
+        
+        // --- NOUVEAU : Flag pour gerer le son d'upgrade ---
+        bool buildUpgradeSoundPlayed_ = false;
+
+        void triggerMoveAnimation(int sx, int sy, int ex, int ey, int sFloor, int eFloor, Builder* b);
+        void triggerBuildAnimation(int x, int y, int floor);
+        
+        void renderElement(const glm::vec3& position, const glm::vec3& scale, const glm::vec3& color, float alpha, glm::vec3 rotation = glm::vec3(0.0f));
+        void renderPawn(const glm::vec3& pos, int player, bool isSelected);
 };
 
 #endif

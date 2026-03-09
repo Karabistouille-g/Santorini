@@ -1,10 +1,20 @@
-#include "../include/controller.hpp"
-#include "../include/model.hpp"
-#include "../include/network_manager.hpp"
+#include "controller.hpp"
+#include "model.hpp"
+#include "view.hpp"
+#include "network_manager.hpp"
+#include "bob.hpp"
+#include "builder.hpp"
+#include "case.hpp"
 #include <iostream>
-#include <view.hpp>
+#include <thread>
+#include <atomic>
 
 namespace santorini {
+
+Controller& Controller::getInstance() {
+    static Controller instance;
+    return instance;
+}
 
 Controller::Controller() 
     : model_(std::make_unique<Model>()), 
@@ -24,17 +34,28 @@ int Controller::createGame(bool isOnline, bool isServer, const std::string& ip, 
 
     if (isOnlineMode_) {
         if (isServer) {
-            // Le serveur écoute toujours sur son port local 5050
-            std::cout << "--- SERVER MODE: Listening on port 5050 ---" << std::endl;
-            if (!net_->startServer(5050)) return -1;
             myPlayerId_ = 0;
-            isMyTurn_ = true; 
+            isMyTurn_ = true;
+            // Lancer accept() dans un thread pour ne pas bloquer GLFW
+            std::cout << "--- SERVER MODE: En attente d'un client sur le port " << port << " ---" << std::endl;
+            std::thread([this, port]() {
+                if (net_->startServer(port)) {
+                    std::cout << "[Network] Client connecte ! La partie commence." << std::endl;
+                } else {
+                    std::cerr << "[Network] Erreur serveur." << std::endl;
+                }
+            }).detach();
         } else {
-            // Le client se connecte à l'IP et au PORT donnés (ceux de Ngrok potentiellement)
-            std::cout << "--- CLIENT MODE: Connecting to " << ip << ":" << port << " ---" << std::endl;
-            if (!net_->connectToClient(ip, port)) return -1;
             myPlayerId_ = 1;
             isMyTurn_ = false;
+            std::cout << "--- CLIENT: Connexion a " << ip << ":" << port << " ---" << std::endl;
+            std::thread([this, ip, port]() {
+                if (net_->connectToClient(ip, port)) {
+                    std::cout << "[Network] Connecte au serveur ! La partie commence." << std::endl;
+                } else {
+                    std::cerr << "[Network] Erreur de connexion." << std::endl;
+                }
+            }).detach();
         }
     } else {
         myPlayerId_ = 0; 
@@ -44,45 +65,26 @@ int Controller::createGame(bool isOnline, bool isServer, const std::string& ip, 
 }
 
 int Controller::selectMove(int pawnId, int x, int y) {
+    if (isOnlineMode_ && !isMyTurn_) return 0;
 
-    std::cout << "Controller 1" << std::endl;
-    if (isOnlineMode_ && !isMyTurn_) {
-        std::cout << "[Game] Not your turn!" << std::endl;
-        return 0;
-    }
-
-    std::cout << "Controller 2" << std::endl;
     Builder* pawn = model_->getPawn(myPlayerId_, pawnId);
-    if (!pawn) {
-        std::cout << "[Error] Pawn not found!" << std::endl;
-        return 0;
-    }
+    if (!pawn) return 0;
 
-    std::cout << "Controller 3" << std::endl;
     bool success = pawn->moveBuilder(x, y);
-    std::cout << "Controller 4" << std::endl;
 
     if (success) {
-        std::cout << "[Game] Move Validated!" << std::endl;
         if (isOnlineMode_) {
             Packet p{ActionType::MOVE, pawnId, x, y};
             net_->sendPacket(p);
         }
-        if (model_->endGame()) {
-            return 2;
-        }
+        if (pawn->getPosition()->getFloor() == 3) return 2;
         return 1;
-    } else {
-        std::cout << "[Game] Invalid Move (Check rules or collisions)" << std::endl;
-        return 0;
     }
+    return 0;
 }
 
 bool Controller::selectBuild(int pawnId, int x, int y) {
-    if (isOnlineMode_ && !isMyTurn_) {
-        std::cout << "[Game] Not your turn!" << std::endl;
-        return false;
-    }
+    if (isOnlineMode_ && !isMyTurn_) return false;
 
     Builder* pawn = model_->getPawn(myPlayerId_, pawnId);
     if (!pawn) return false;
@@ -90,18 +92,17 @@ bool Controller::selectBuild(int pawnId, int x, int y) {
     bool success = pawn->createBuild(x, y);
 
     if (success) {
-        std::cout << "[Game] Build Validated!" << std::endl;
         if (isOnlineMode_) {
             Packet p{ActionType::BUILD, pawnId, x, y};
             net_->sendPacket(p);
             isMyTurn_ = false;
-            std::cout << "--- END OF TURN (Waiting for opponent) ---" << std::endl;
+        } else {
+             model_->nextTurn();
+             isMyTurn_ = false; 
         }
         return true;
-    } else {
-        std::cout << "[Game] Invalid Build" << std::endl;
-        return false;
     }
+    return false;
 }
 
 void Controller::processNetwork() {
@@ -109,28 +110,52 @@ void Controller::processNetwork() {
 
     auto pktOpt = net_->receivePacket();
     if (pktOpt.has_value()) {
-
         Packet p = pktOpt.value();
         int enemyId = (myPlayerId_ == 0) ? 1 : 0;
         Builder* enemyPawn = model_->getPawn(enemyId, p.workerId);
 
         if (enemyPawn) {
             if (p.type == ActionType::MOVE) {
-                std::cout << "[Network] Opponent Moved Pawn " << p.workerId << std::endl;
                 enemyPawn->moveBuilder(p.x, p.y);
+                if (enemyPawn->getPosition()->getFloor() == 3) {
+                    // MODIF : On utilise setWinner pour bien afficher le nom de l'adversaire
+                    View::getInstance().setWinner(enemyId); 
+                }
             } 
             else if (p.type == ActionType::BUILD) {
-                std::cout << "[Network] Opponent Built at " << p.x << "," << p.y << std::endl;
                 enemyPawn->createBuild(p.x, p.y);
                 isMyTurn_ = true;
-                std::cout << "--- YOUR TURN ---" << std::endl;
-            }
+                std::cout << "--- C'EST VOTRE TOUR ---" << std::endl;
+                model_->printTerminalBoard();
+            }   
         }
     }
 }
 
-int Controller::getCurrentPlayer() {
-    return myPlayerId_;
+//pour savoir si l'IA réfléchit déjà
+static std::atomic<bool> aiThinking{false};
+
+void Controller::processAI() {
+    // Si c'est au tour de Bob (Joueur 1) et qu'il ne réfléchit pas déjà
+    if (!isOnlineMode_ && model_->getCurrentPlayer() == 1 && !aiThinking) {
+        
+        aiThinking = true; // On bloque les futurs appels
+        
+        // MODIF : On retire le thread détaché ici pour éviter les crashs graphiques (synchronisation)
+        int depth = (aiDifficulty_ == 1) ? 1 : (aiDifficulty_ == 2 ? 3 : 5);
+        std::cout << "[IA] Bob reflechit (Profondeur " << depth << ")..." << std::endl;
+        
+        Bob bob(aiDifficulty_);
+        bob.playTurn(); 
+        
+        model_->nextTurn();
+        this->isMyTurn_ = true; 
+        
+        std::cout << "[IA] Bob a fini de jouer." << std::endl;
+        aiThinking = false; // On libère le flag
+    }
 }
 
-}
+int Controller::getCurrentPlayer() { return myPlayerId_; }
+
+} // namespace santorini

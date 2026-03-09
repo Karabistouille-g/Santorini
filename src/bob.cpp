@@ -1,8 +1,13 @@
 #include <bob.hpp>
 
-Bob::Bob() : iaBuilderFirst(nullptr), iaBuilderSecond(nullptr), playerBuilderFirst(nullptr), playerBuilderSecond(nullptr) {
-    
-    Board* b = Board::getInstance(); 
+Bob::Bob(int difficulty)
+    : iaBuilderFirst(nullptr),
+      iaBuilderSecond(nullptr),
+      playerBuilderFirst(nullptr),
+      playerBuilderSecond(nullptr),
+      difficulty_(difficulty)
+{
+    b = Board::getInstance();
 
     for (int i = 0; i < 5; i++) {
         for (int j = 0; j < 5; j++) {
@@ -12,134 +17,257 @@ Bob::Bob() : iaBuilderFirst(nullptr), iaBuilderSecond(nullptr), playerBuilderFir
 
             if (tempBuilder != nullptr) {
 
-                // Builder de l'IA
-                if (iaBuilderFirst == nullptr && tempBuilder->getPlayer() == 1) { // FIXME depend de l'id de l'ia
-                    iaBuilderFirst = tempBuilder; 
+                if (tempBuilder->getPlayer() == 1) {
+                    if (!iaBuilderFirst) iaBuilderFirst = tempBuilder;
+                    else if (!iaBuilderSecond) iaBuilderSecond = tempBuilder;
                 }
-                if (iaBuilderSecond == nullptr && tempBuilder->getPlayer() == 1) {
-                    iaBuilderSecond = tempBuilder;
-                }
-
-                // Builder du joueur
-                if (playerBuilderFirst == nullptr && tempBuilder->getPlayer() == 0) {
-                    playerBuilderSecond = tempBuilder;
-                }
-                if (playerBuilderSecond == nullptr && tempBuilder->getPlayer() == 0) {
-                    playerBuilderSecond = tempBuilder;
+                else {
+                    if (!playerBuilderFirst) playerBuilderFirst = tempBuilder;
+                    else if (!playerBuilderSecond) playerBuilderSecond = tempBuilder;
                 }
             }
         }
     }
 }
-
 int Bob::score() {
-    int score = 0;
+    // Lecture directe du plateau réel (fonctionne car minimax utilise move/undoMove)
+    Builder* iaBuilders[2]     = {iaBuilderFirst, iaBuilderSecond};
+    Builder* playerBuilders[2] = {playerBuilderFirst, playerBuilderSecond};
 
-    auto myBuilders = {iaBuilderFirst, iaBuilderSecond};
-    auto oppBuilders = {playerBuilderFirst, playerBuilderSecond};
-
-    for (auto builder : myBuilders) {
-        if (builder) score += builder->getPosition()->getFloor() * 10;
+    // 1. DETECTION DE VICTOIRE
+    for (int i = 0; i < 2; i++) {
+        if (iaBuilders[i]->getPosition()->getFloor() == 3)     return 20000;
     }
-    for (auto builder : oppBuilders) {
-        if (builder) score -= builder->getPosition()->getFloor() * 10;
+    for (int i = 0; i < 2; i++) {
+        if (playerBuilders[i]->getPosition()->getFloor() == 3) return -20000;
     }
 
-    for (auto builder : myBuilders) {
-        if (builder && builder->getPosition()->getFloor() == 3) return +1000;
+    int totalScore = 0;
+
+    // NIVEAU 1 : FACILE
+    if (difficulty_ == 1) {
+        for (int i = 0; i < 2; i++) {
+            totalScore += iaBuilders[i]->getPosition()->getFloor() * 10;
+        }
     }
-    for (auto builder : oppBuilders) {
-        if (builder && builder->getPosition()->getFloor() == 3) return -1000;
+    // NIVEAU 2 : MOYEN
+    else if (difficulty_ == 2) {
+        for (int i = 0; i < 2; i++) {
+            int x = iaBuilders[i]->getPosition()->getX();
+            int y = iaBuilders[i]->getPosition()->getY();
+            int h = iaBuilders[i]->getPosition()->getFloor();
+            totalScore += h * 30;
+            if (x >= 1 && x <= 3 && y >= 1 && y <= 3) totalScore += 10;
+        }
     }
+    // NIVEAU 3 : DIFFICILE
+    else {
+        for (int i = 0; i < 2; i++) {
+            int x = iaBuilders[i]->getPosition()->getX();
+            int y = iaBuilders[i]->getPosition()->getY();
+            int h = iaBuilders[i]->getPosition()->getFloor();
+
+            totalScore += h * 100;
+            if (x == 2 && y == 2) totalScore += 50;
+
+            for (int j = 0; j < 2; j++) {
+                int px = playerBuilders[j]->getPosition()->getX();
+                int py = playerBuilders[j]->getPosition()->getY();
+                int dist = abs(x - px) + abs(y - py);
+                if (dist <= 1) totalScore += 40;
+            }
+        }
+    }
+    return totalScore;
+}
+int Bob::countMoves(Builder* builder) {
+
+    int moves = 0;
+
+    Case* pos = builder->getPosition();
+    int x = pos->getX();
+    int y = pos->getY();
+
+    for (int dx = -1; dx <= 1; dx++) {
+        for (int dy = -1; dy <= 1; dy++) {
+
+            if (dx == 0 && dy == 0) continue;
+
+            if (builder->moveBuilder(x + dx, y + dy)) {
+                moves++;
+                builder->undoMove();
+            }
+        }
+    }
+
+    return moves;
 }
 
-int Bob::minimax(int h, bool isMaximizing) {
+int Bob::minimax(int depth, int alpha, int beta, bool maximizing) {
 
-    if (h == 0) return score();
+    if (depth == 0)
+        return score();
 
-    int bestScore = isMaximizing ? -10000 : 10000;
-    auto activeBuilders = isMaximizing ? std::vector<Builder*>{iaBuilderFirst, iaBuilderSecond} : std::vector<Builder*>{playerBuilderFirst, playerBuilderSecond};
+    if (maximizing) {
 
-    for (Builder* builder : activeBuilders) {
-        if (!builder) continue;
+        int maxEval = -100000;
 
-        Case* currentPos = builder->getPosition();
-        int x = currentPos->getX();
-        int y = currentPos->getY();
+        for (Builder* builder : {iaBuilderFirst, iaBuilderSecond}) {
 
-        for (int i = -1; i < 1; i++) {
-            for (int j = -1; j < 1; j++) {
-                if (i == 0 && j == 0) continue;
+            Case* pos = builder->getPosition();
+            int x = pos->getX();
+            int y = pos->getY();
 
-                if (builder->moveBuilder(x + i, y + j)) {
+            for (int dx = -1; dx <= 1; dx++) {
+                for (int dy = -1; dy <= 1; dy++) {
 
-                    Case* newPos = builder->getPosition();
-                    int newX = newPos->getX();
-                    int newY = newPos->getY();
+                    if (dx == 0 && dy == 0) continue;
 
-                    for (int k = -1; k < 1; k++) {
-                        for (int l = -1; l < 1; l++) {
-                            if (k == 0 && l == 0) continue;
+                    if (builder->moveBuilder(x + dx, y + dy)) {
 
-                            if (builder->createBuild(newX + k, newY + l)) {
+                        Case* newPos = builder->getPosition();
+                        int nx = newPos->getX();
+                        int ny = newPos->getY();
 
-                                int currentRes = minimax(h - 1, !isMaximizing);
+                        for (int bx = -1; bx <= 1; bx++) {
+                            for (int by = -1; by <= 1; by++) {
 
-                                if (isMaximizing) {
-                                    bestScore = std::max(bestScore, currentRes);
-                                } else {
-                                    bestScore = std::min(bestScore, currentRes);
+                                if (bx == 0 && by == 0) continue;
+
+                                if (builder->createBuild(nx + bx, ny + by)) {
+
+                                    int eval = minimax(depth - 1, alpha, beta, false);
+
+                                    maxEval = std::max(maxEval, eval);
+                                    alpha = std::max(alpha, eval);
+
+                                    builder->undoBuild();
+
+                                    if (beta <= alpha)
+                                        return maxEval;
                                 }
-
-                                builder->undoBuild();
                             }
                         }
+
+                        builder->undoMove();
                     }
-                    builder->undoMove();
                 }
             }
         }
+
+        return maxEval;
     }
-    return bestScore;
+    else {
+
+        int minEval = 100000;
+
+        for (Builder* builder : {playerBuilderFirst, playerBuilderSecond}) {
+
+            Case* pos = builder->getPosition();
+            int x = pos->getX();
+            int y = pos->getY();
+
+            for (int dx = -1; dx <= 1; dx++) {
+                for (int dy = -1; dy <= 1; dy++) {
+
+                    if (dx == 0 && dy == 0) continue;
+
+                    if (builder->moveBuilder(x + dx, y + dy)) {
+
+                        Case* newPos = builder->getPosition();
+                        int nx = newPos->getX();
+                        int ny = newPos->getY();
+
+                        for (int bx = -1; bx <= 1; bx++) {
+                            for (int by = -1; by <= 1; by++) {
+
+                                if (bx == 0 && by == 0) continue;
+
+                                if (builder->createBuild(nx + bx, ny + by)) {
+
+                                    int eval = minimax(depth - 1, alpha, beta, true);
+
+                                    minEval = std::min(minEval, eval);
+                                    beta = std::min(beta, eval);
+
+                                    builder->undoBuild();
+
+                                    if (beta <= alpha)
+                                        return minEval;
+                                }
+                            }
+                        }
+
+                        builder->undoMove();
+                    }
+                }
+            }
+        }
+
+        return minEval;
+    }
 }
 
 void Bob::playTurn() {
-    int bestScore = -10000;
-    MoveInfo bestMove = {-1, -1, -1, -1, -1};
+    int depth;
+
+    // Définition de la profondeur selon la difficulté
+    if (difficulty_ == 1) {
+        depth = 1; // Niveau 1 : Coup immédiat
+    } else if (difficulty_ == 2) {
+        depth = 3; // Niveau 2 : Anticipe un peu
+    } else {
+        depth = 5; // Niveau 3 : anticipe 5 coups à l'avance
+    }
+
+    int bestScore = -100000;
+    MoveInfo bestMove;
     Builder* bestBuilder = nullptr;
 
+    // On parcourt les deux bâtisseurs de l'IA
     for (Builder* builder : {iaBuilderFirst, iaBuilderSecond}) {
-        if (!builder) continue;
-
         Case* pos = builder->getPosition();
+        int x = pos->getX();
+        int y = pos->getY();
+
+        // Simulation du Déplacement
         for (int dx = -1; dx <= 1; dx++) {
             for (int dy = -1; dy <= 1; dy++) {
-                int nx = pos->getX() + dx;
-                int ny = pos->getY() + dy;
+                if (dx == 0 && dy == 0) continue;
 
-                if (builder->moveBuilder(nx, ny)) {
+                if (builder->moveBuilder(x + dx, y + dy)) {
+                    Case* newPos = builder->getPosition();
+                    int nx = newPos->getX();
+                    int ny = newPos->getY();
+
+                    // Simulation de la Construction
                     for (int bx = -1; bx <= 1; bx++) {
                         for (int by = -1; by <= 1; by++) {
-                            int bnx = nx + bx;
-                            int bny = ny + by;
+                            if (bx == 0 && by == 0) continue;
 
-                            if (builder->createBuild(bnx, bny)) {
-                                int score = minimax(2, false); // Profondeur 2
-                                if (score > bestScore) {
-                                    bestScore = score;
-                                    bestMove = {nx, ny, bnx, bny, score};
+                            if (builder->createBuild(nx + bx, ny + by)) {
+                                
+                                // Appel du minimax avec élagage Alpha-Beta pour tenir la profondeur 5+
+                                // On commence à depth - 1 car on vient de simuler le premier coup
+                                int eval = minimax(depth - 1, -100000, 100000, false);
+
+                                if (eval > bestScore) {
+                                    bestScore = eval;
+                                    bestMove = {nx, ny, nx + bx, ny + by, eval};
                                     bestBuilder = builder;
                                 }
-                                builder->undoBuild();
+
+                                builder->undoBuild(); // Annule construction
                             }
                         }
                     }
-                    builder->undoMove();
+                    builder->undoMove(); // Annule déplacement
                 }
             }
         }
     }
 
+    // Application réelle du meilleur coup trouvé sur le plateau
     if (bestBuilder) {
         bestBuilder->moveBuilder(bestMove.moveX, bestMove.moveY);
         bestBuilder->createBuild(bestMove.buildX, bestMove.buildY);

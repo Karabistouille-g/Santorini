@@ -26,10 +26,7 @@ class Model {
          */
         bool playTurn(int player);
 
-        /**
-         * Check the win condition
-         */
-        bool endGame();
+      
 
         // --- Partie de louis pour le controller---
         // Permet de recup pion spécifique pour le bouger
@@ -39,15 +36,29 @@ class Model {
             }
             return nullptr;
         }
-       
+        void printTerminalBoard();
+
+        int getCurrentPlayer() const { return currentPlayer_; }
+
+        void nextTurn() { 
+         currentPlayer_ = (currentPlayer_ == 0) ? 1 : 0; 
+        }
         // ------------------------------------------------
 
     private:
 
         Board* board_;
-        int currentPlayer_;
+        int currentPlayer_ = 0;
         Builder* pawns[2][2];
         View& view;
+        
+        bool gameOver_ = false;
+        int winner_ = -1;
+    
+
+public:
+    bool isGameOver() const;
+    int getWinner() const;
 };
 
 #endif // MODEL_H

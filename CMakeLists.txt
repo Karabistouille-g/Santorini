@@ -12,6 +12,7 @@ project(Santorini
 
 find_package(Threads)
 find_package(glfw3 REQUIRED)
+set(OpenGL_GL_PREFERENCE GLVND)
 find_package(OpenGL REQUIRED)
 
 # View libraries
@@ -26,11 +27,12 @@ add_library(model src/model.cpp)
 # Controller libraries
 add_library(network_manager src/network_manager.cpp)
 add_library(controller src/controller.cpp)
+add_library(bob src/bob.cpp)
 
 # Link dependencies between libraries
 target_link_libraries(model PRIVATE board builder case)
 target_link_libraries(view PRIVATE glfw OpenGL::GL shader glad)
-target_link_libraries(controller PRIVATE network_manager model view)
+target_link_libraries(controller PRIVATE network_manager model view bob)
 
 add_executable(santorini src/main.cpp)
 add_executable(tests

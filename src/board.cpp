@@ -23,8 +23,10 @@ bool Board::resetInstance() {
     if (instance_ != nullptr) {
         for (int i = 0; i < 5; i++) {
             for (int j = 0; j < 5; j++) {
-                delete cases_[i][j];
-                cases_[i][j] = nullptr;
+                if (cases_[i][j] != nullptr) {
+                    delete cases_[i][j];
+                    cases_[i][j] = nullptr;
+                }
             }
         }
         delete instance_;
@@ -35,5 +37,6 @@ bool Board::resetInstance() {
 }
 
 Case* Board::getCase(int x, int y) {
+    if (x < 0 || x >= 5 || y < 0 || y >= 5) return nullptr;
     return cases_[x][y];
 }

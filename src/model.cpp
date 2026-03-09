@@ -48,22 +48,27 @@ bool Model::playTurn(int player) {
     std::cin >> x >> y; 
     
     pawns[player][builder]->createBuild(x, y);
-    endGame();
+    
     
     return true; 
 }
 
-bool Model::endGame() {
-    for (int i = 0; i < 2; i++) {
-        for (int j = 0; j < 2; j++) {
-            if (pawns[i][j] == nullptr) continue;
-            Case* pos = pawns[i][j]->getPosition();
-            if (pos == nullptr) continue; // FIXME message d'erreur
-            if (pos->getFloor() == 3) {
-                std::cout << "Player win" << std::endl;
-                return true;
-            }
+void Model::printTerminalBoard() {
+    std::cout << "\n--- PLATEAU ACTUEL (Niveaux) ---\n";
+    for (int y = 4; y >= 0; y--) { 
+        for (int x = 0; x < 5; x++) {
+            // On affiche le niveau
+            std::cout << " " << board_->getCase(x, y)->getFloor() << " ";
         }
+        std::cout << "\n";
     }
-    return false;
+    std::cout << "--------------------------------\n";
+}
+
+bool Model::isGameOver() const {
+    return gameOver_;
+}
+
+int Model::getWinner() const {
+    return winner_;
 }

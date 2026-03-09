@@ -16,30 +16,34 @@ Case* Builder::getPosition() {
 } 
 
 bool Builder::moveBuilder(int x, int y) {
-
-    std::cout << getPosition()->getX() << "," << getPosition()->getY() << " -> " << x << "," << y << std::endl;
-
     Case* target = b_->getCase(x, y);
+
+    // SÉCURITÉ : On vérifie si la case est déjà occupée par un autre Builder
+    if (target->getBuilder() != nullptr) {
+        std::cout << "[Rules] Mouvement impossible : Case deja occupee !" << std::endl;
+        return false;
+    }
     if (!validCase(target)) return false;
 
-    std::cout << "Target floor: " << target->getFloor() << std::endl;
-
     if (target->getFloor() >= 4) return false;
-
-    std::cout << "Current floor: " << position_->getFloor() << std::endl;
 
     int floor = position_->getFloor();
     int targetFloor = target->getFloor();
     
     if (targetFloor > floor + 1) return false;
 
-    std::cout << "Move successful" << std::endl;
-
+    // On déplace le pion
     position_->setBuilder(nullptr);
     target->setBuilder(this);
-
     position_ = target;
     moves_.push(position_);
+
+    // CONDITION DE VICTOIRE : Si on arrive sur un étage 3
+    if (targetFloor == 3) {
+        std::cout << "VICTOIRE DETECTEE pour joueur " << player_ << std::endl;
+        
+    }
+
     return true;
 }
 
@@ -58,6 +62,7 @@ bool Builder::createBuild(int x, int y) {
     std::cout << "Build successful" << std::endl;
 
     target->addFloor();
+    builds_.push(target);
     return true;
 }
 
@@ -91,8 +96,14 @@ int Builder::getId() {
 }
 
 void Builder::undoMove() {
-    position_ = moves_.top();
+    // On retire la position actuelle (sommet = dernier mouvement)
     moves_.pop();
+    // La position précédente est maintenant au sommet
+    Case* previous = moves_.top();
+
+    position_->setBuilder(nullptr);  // retirer de la case actuelle
+    previous->setBuilder(this);      // remettre dans l’ancienne
+    position_ = previous;
 }
 
 void Builder::undoBuild() {
