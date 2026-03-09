@@ -146,9 +146,12 @@ void Controller::processAI() {
         std::cout << "[IA] Bob reflechit (Profondeur " << depth << ")..." << std::endl;
         
         Bob bob(aiDifficulty_);
-        bob.playTurn(); 
+        std::cout << "[IA] Bob crash ici 1" << std::endl;
+        bob.playTurn();
+        std::cout << "[IA] Bob crash ici 2" << std::endl;
         
         model_->nextTurn();
+        std::cout << "[IA] Bob crash ici 3" << std::endl;
         this->isMyTurn_ = true; 
         
         std::cout << "[IA] Bob a fini de jouer." << std::endl;

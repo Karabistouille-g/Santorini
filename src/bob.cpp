@@ -201,15 +201,18 @@ int Bob::minimax(int depth, int alpha, int beta, bool maximizing) {
 
 void Bob::playTurn() {
     int depth;
-    if      (difficulty_ == 1) depth = 1;
+    if      (difficulty_ == 3) depth = 5;
     else if (difficulty_ == 2) depth = 3;
-    else                       depth = 5;
+    else                       depth = 1;
+
+    std::cout << "[IA] Bob crash ici 1.1" << std::endl;
 
     int bestScore = -100000;
     MoveInfo bestMove;
     Builder* bestBuilder = nullptr;
 
     for (Builder* builder : {iaBuilderFirst, iaBuilderSecond}) {
+        std::cout << "[IA] Bob crash ici 1.2" << std::endl;
         if (!builder) continue;
         Case* pos = builder->getPosition();
         int x = pos->getX(), y = pos->getY();
@@ -217,10 +220,13 @@ void Bob::playTurn() {
         for (int dx = -1; dx <= 1; dx++) {
             for (int dy = -1; dy <= 1; dy++) {
                 if (dx == 0 && dy == 0) continue;
-
+                std::cout << "[IA] Bob crash ici 1.3" << std::endl;
+                std::cout << " " << x << " " << dx << " " << y << " " << dy << std::endl;
                 if (builder->moveBuilder(x + dx, y + dy)) {
+                    std::cout << "[IA] Bob crash ici 1.4" << std::endl;
                     // Victoire immédiate → on joue tout de suite
                     if (builder->getPosition()->getFloor() == 3) {
+                        std::cout << "[IA] Bob crash ici 1.5" << std::endl;
                         bestScore   = 20000;
                         bestMove    = {x + dx, y + dy, x + dx, y + dy, 20000};
                         bestBuilder = builder;
@@ -230,17 +236,18 @@ void Bob::playTurn() {
 
                     Case* newPos = builder->getPosition();
                     int nx = newPos->getX(), ny = newPos->getY();
-
+                    std::cout << "[IA] Bob crash ici 1.6" << std::endl;
                     for (int bx = -1; bx <= 1; bx++) {
                         for (int by = -1; by <= 1; by++) {
                             if (bx == 0 && by == 0) continue;
-
+                            std::cout << "[IA] Bob crash ici 1.7" << std::endl;
                             if (builder->createBuild(nx + bx, ny + by)) {
                                 int eval = minimax(depth - 1, -100000, 100000, false);
                                 if (eval > bestScore) {
                                     bestScore   = eval;
                                     bestMove    = {nx, ny, nx + bx, ny + by, eval};
                                     bestBuilder = builder;
+                                    std::cout << "[IA] Bob crash ici 1.8" << std::endl;
                                 }
                                 builder->undoBuild();
                             }
@@ -248,6 +255,7 @@ void Bob::playTurn() {
                     }
                     builder->undoMove();
                 }
+                std::cout << "[IA] Bob crash ici 1.9" << std::endl;
             }
         }
     }

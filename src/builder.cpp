@@ -16,6 +16,7 @@ Case* Builder::getPosition() {
 } 
 
 bool Builder::moveBuilder(int x, int y) {
+    if (x < 0 || x >= 5 || y < 0 || y >= 5) return false;
     Case* target = b_->getCase(x, y);
 
     // SÉCURITÉ : On vérifie si la case est déjà occupée par un autre Builder
@@ -48,7 +49,7 @@ bool Builder::moveBuilder(int x, int y) {
 }
 
 bool Builder::createBuild(int x, int y) {
-
+    if (x < 0 || x >= 5 || y < 0 || y >= 5) return false;
     std::cout << getPosition()->getX() << "," << getPosition()->getY() << " -> " << x << "," << y << std::endl;
 
     Case* target = b_->getCase(x, y);
@@ -68,6 +69,8 @@ bool Builder::createBuild(int x, int y) {
 
 bool Builder::validCase(Case* target) {
     
+    std::cout << "Avant le crash" << target->getFloor() << std::endl;
+
     int curX = position_->getX();
     int curY = position_->getY();
 
