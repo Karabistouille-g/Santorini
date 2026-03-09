@@ -6,8 +6,8 @@
 #include <glm/glm.hpp>
 
 Shader::Shader(const char* vertexPath, const char* fragmentPath, const char* geometryPath) {
-    // Vertex Shader 
-    const char* vShaderCode = "#version 430 core\n"
+    // Vertex Shader (Version 330 pour compatibilité maximale)
+    const char* vShaderCode = "#version 330 core\n"
         "layout (location = 0) in vec3 aPos;\n"
         "layout (location = 1) in vec3 aNormal;\n"
         "out vec3 Normal;\n"
@@ -21,13 +21,13 @@ Shader::Shader(const char* vertexPath, const char* fragmentPath, const char* geo
         "   gl_Position = projection * view * vec4(FragPos, 1.0);\n"
         "}\0";
 
-    // Fragment Shader (Avec Transparence "alpha")
-    const char* fShaderCode = "#version 430 core\n"
+    // Fragment Shader (Version 330)
+    const char* fShaderCode = "#version 330 core\n"
         "out vec4 FragColor;\n"
         "in vec3 Normal;\n"
         "in vec3 FragPos;\n"
         "uniform vec3 caseColor;\n"
-        "uniform float alpha;\n" // Nouvelle variable pour la transparence
+        "uniform float alpha;\n" 
         "void main() {\n"
         "   vec3 norm = normalize(Normal);\n"
         "   vec3 lightDir = normalize(vec3(0.5, 1.0, 0.5));\n"
@@ -41,7 +41,6 @@ Shader::Shader(const char* vertexPath, const char* fragmentPath, const char* geo
         "   float spec = pow(max(dot(viewDir, reflectDir), 0.0), 32);\n"
         "   vec3 specular = 0.3 * spec * vec3(1.0, 1.0, 1.0);\n"
         
-        "   // On utilise la variable alpha ici\n"
         "   FragColor = vec4(ambient + diffuse + specular, alpha);\n"
         "}\0";
 

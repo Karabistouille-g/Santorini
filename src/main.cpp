@@ -4,8 +4,6 @@
 #include <thread>
 #include <chrono>
 
-// MAGIE AUDIO : MINIAUDIO
-//compile le moteur audio directement dans le main 
 #define MINIAUDIO_IMPLEMENTATION
 #include "../include/miniaudio.h"
 
@@ -15,11 +13,9 @@
 
 using namespace santorini;
 
-//MOTEUR AUDIO GLOBAL
 ma_engine audioEngine;
 bool audioInitialized = false;
 
-// Fonction globale utilisable par le fichier view.cpp pour jouer un son
 void playSoundFX(const char* filepath) {
     if (audioInitialized) {
         ma_engine_play_sound(&audioEngine, filepath, NULL);
@@ -27,23 +23,21 @@ void playSoundFX(const char* filepath) {
 }
 
 int main(int argc, char* argv[]) {
-    // INITIALISATION AUDIO
     if (ma_engine_init(NULL, &audioEngine) == MA_SUCCESS) {
         audioInitialized = true;
     } else {
-        std::cout << "[Audio] Attention : Pas de peripherique audio detecte (Le jeu continuera sans son)." << std::endl;
+        std::cout << "[Audio] Attention : Pas de peripherique audio detecte." << std::endl;
     }
 
     bool isOnline = false;
     bool isServer = false;
     std::string ip = "127.0.0.1";
     int port = 5050;
-    int aiChoice = 1; // Valeur par défaut
+    int aiChoice = 1; 
     
     std::string pseudo1 = "Joueur 1";
     std::string pseudo2 = "Joueur 2";
 
-    // GESTION DES ARGUMENTS ET SAISIE AVANT TOUTE FENÊTRE
     if (argc > 1 && std::string(argv[1]) == "server") {
         isOnline = true;
         isServer = true;
@@ -71,7 +65,6 @@ int main(int argc, char* argv[]) {
         return 0;
     }
 
-    // INITIALISATION (La fenêtre s'ouvre)
     Controller& controller = Controller::getInstance();
     controller.setAIDifficulty(aiChoice);
     controller.setPlayerNames(pseudo1, pseudo2);
@@ -84,9 +77,17 @@ int main(int argc, char* argv[]) {
     View& view = View::getInstance();
     GLFWwindow* window = view.getWindow();
 
-    // BOUCLE PRINCIPALE
+    // --- CORRECTION CRUCIALE : ANTI-SEGFAULT ---
+    // Si la machine du pote ne supporte pas OpenGL, window_ sera nul.
+    // On l'empeche d'entrer dans la boucle sinon = Segfault !
+    if (window == nullptr) {
+        std::cerr << "\n[ ERREUR CRITIQUE ] Impossible de lancer l'interface graphique !" << std::endl;
+        std::cerr << "-> Verifie que ta carte graphique supporte OpenGL 3.3." << std::endl;
+        if (audioInitialized) ma_engine_uninit(&audioEngine);
+        return -1;
+    }
+
     while (!glfwWindowShouldClose(window)) {
-        //vider le buffer
         view.viewBoard(); 
 
         if (!view.isWon()) {
@@ -95,7 +96,6 @@ int main(int argc, char* argv[]) {
             if (isOnline) {
                 controller.processNetwork();
             } else {
-                // L'IA doit être appelée mais ne doit pas bloquer
                 controller.processAI();
             }
         } else {
@@ -106,11 +106,9 @@ int main(int argc, char* argv[]) {
         glfwSwapBuffers(window);
         glfwPollEvents();
 
-        // Limiteur FPS
         std::this_thread::sleep_for(std::chrono::milliseconds(16));
     }
 
-    // On detruit le moteur audio
     if (audioInitialized) {
         ma_engine_uninit(&audioEngine);
     }

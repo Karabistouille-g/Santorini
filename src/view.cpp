@@ -4,22 +4,32 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <string>
 
-// --- LIEN AVEC LE MOTEUR AUDIO DANS MAIN.CPP ---
 extern void playSoundFX(const char* filepath);
 
 View::View() : cursorX_(2), cursorY_(2), lockX_(-1), lockY_(-1), lock_(false), build_(false), win_(false), winnerId_(-1), lockBuilder_(nullptr), keyUpPressed_(false), keyDownPressed_(false), keyRightPressed_(false), keyLeftPressed_(false), b_(Board::getInstance())
 {
     if( !glfwInit() ) { std::cerr << "Failed to initialize GLFW" << std::endl; return; }
-    glfwWindowHint( GLFW_CONTEXT_VERSION_MAJOR, 4 );
+    
+    // --- CORRECTION COMPATIBILITE MAXIMALE (OpenGL 3.3 au lieu de 4.3) ---
+    glfwWindowHint( GLFW_CONTEXT_VERSION_MAJOR, 3 );
     glfwWindowHint( GLFW_CONTEXT_VERSION_MINOR, 3 );
     glfwWindowHint( GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE );
+#ifdef __APPLE__
+    glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE); // Indispensable si un jour qqn joue sur Mac
+#endif
 
     window_ = glfwCreateWindow( WINDOW_BASE_WIDTH, WINDOW_BASE_HEIGHT, "Santorini", nullptr, nullptr );
     if( !window_ ) { std::cerr << "[ ERROR ] Failed to create window" << std::endl; glfwTerminate(); return; }
     glfwMakeContextCurrent( window_ );
     glfwSwapInterval(1);
 
-    if( !gladLoadGLLoader( ( GLADloadproc ) glfwGetProcAddress ) ) { std::cout << "[ ERROR ] Failed to initialize GLAD" << std::endl; return; }
+    // --- CORRECTION SEGFAULT : Si GLAD plante, on annule tout proprement ---
+    if( !gladLoadGLLoader( ( GLADloadproc ) glfwGetProcAddress ) ) { 
+        std::cerr << "[ ERROR ] Failed to initialize GLAD" << std::endl; 
+        glfwDestroyWindow(window_);
+        window_ = nullptr;
+        return; 
+    }
 
     glViewport( 0, 0, WINDOW_BASE_WIDTH, WINDOW_BASE_HEIGHT );
     glfwSetFramebufferSizeCallback( window_, []( GLFWwindow * window, int width, int height ) { glViewport( 0, 0, width, height ); } );
@@ -33,20 +43,21 @@ View::View() : cursorX_(2), cursorY_(2), lockX_(-1), lockY_(-1), lock_(false), b
     m_ = std::make_unique<Mesh>();
 }
 
-View::~View() { s_.reset(); m_.reset(); glfwDestroyWindow( window_ ); glfwTerminate(); }
+View::~View() { 
+    if (s_) s_.reset(); 
+    if (m_) m_.reset(); 
+    if (window_) glfwDestroyWindow( window_ ); 
+    glfwTerminate(); 
+}
 
 View & View::getInstance() { static View instance; return instance; }
 
-// --- LANCEMENT DE LA MUSIQUE DE VICTOIRE ---
 void View::setWinner(int id) { 
-    if (!win_) { 
-        playSoundFX("sounds/win.mp3");
-    }
+    if (!win_) playSoundFX("sounds/win.mp3");
     win_ = true; 
     winnerId_ = id;
 }
 
-// --- LANCEMENT DES BRUITAGES (Animations) en .mp3 ---
 void View::triggerMoveAnimation(int sx, int sy, int ex, int ey, int sFloor, int eFloor, Builder* b) {
     moveAnimActive_ = true;
     moveAnimStartX_ = sx; moveAnimStartY_ = sy;
@@ -54,8 +65,6 @@ void View::triggerMoveAnimation(int sx, int sy, int ex, int ey, int sFloor, int 
     moveAnimStartFloor_ = sFloor; moveAnimEndFloor_ = eFloor;
     movingBuilder_ = b;
     moveAnimStartTime_ = glfwGetTime();
-    
-    // SON DE REBOND/SAUT
     playSoundFX("sounds/move.mp3");
 }
 
@@ -64,19 +73,18 @@ void View::triggerBuildAnimation(int x, int y, int floor) {
     buildAnimX_ = x; buildAnimY_ = y;
     buildAnimFloor_ = floor;
     buildAnimStartTime_ = glfwGetTime();
-    
-    // NOUVEAU : On reinitialise le son de l'upgrade
     buildUpgradeSoundPlayed_ = false;
     
-    // SONS D'IMPACT INITIAUX (Phase 1)
     if (floor == 1) playSoundFX("sounds/build1.mp3");
     else if (floor == 2) playSoundFX("sounds/build2.mp3");
     else if (floor == 3) playSoundFX("sounds/build3.mp3");
-    else if (floor == 4) playSoundFX("sounds/dome.mp3"); // Le dome a direct son effet magique
+    else if (floor == 4) playSoundFX("sounds/dome.mp3"); 
 }
 
 void View::viewBoard() {
-    
+    // --- SECURITE ANTI-CRASH ---
+    if (!s_ || !m_) return; 
+
     if (firstFrame_) {
         for (int px = 0; px < 5; px++) {
             for (int py = 0; py < 5; py++) {
@@ -168,54 +176,36 @@ void View::viewBoard() {
                     scale = glm::vec3(0.7f, 0.35f, 0.7f);
                 }
                 
-                // --- ANIMATION DE CONSTRUCTION EN DEUX PHASES ---
                 if (buildAnimActive_ && x == buildAnimX_ && y == buildAnimY_ && f == buildAnimFloor_ - 1) {
                     float totalAnimTime = glfwGetTime() - buildAnimStartTime_;
-                    float t = totalAnimTime / 0.4f; // 0 à 1 pour l'impact, 1 à 2 pour l'upgrade
+                    float t = totalAnimTime / 0.4f; 
                     
                     if (t < 2.0f) {
-                        // PHASE 1 : MOUVEMENT ET IMPACT (0 à 0.4s)
                         if (t <= 1.0f) {
                             if (buildAnimFloor_ == 1) { 
-                                scale.y *= t;
-                                pos.y -= (1.0f - t) * 0.25f;
-                            } 
-                            else if (buildAnimFloor_ == 2) { 
-                                rot.y = (1.0f - t) * 360.0f;
-                                scale.x *= (0.5f + 0.5f * t);
-                                scale.z *= (0.5f + 0.5f * t);
-                            } 
-                            else if (buildAnimFloor_ == 3) { 
-                                float bounce = abs(cos(t * 3.14159f * 1.5f)) * (1.0f - t);
-                                pos.y += bounce * 1.5f;
-                            } 
-                            else if (buildAnimFloor_ == 4) { 
-                                pos.y += (1.0f - t) * 4.0f; 
-                                float flash = 1.0f - (t * 2.0f);
+                                scale.y *= t; pos.y -= (1.0f - t) * 0.25f;
+                            } else if (buildAnimFloor_ == 2) { 
+                                rot.y = (1.0f - t) * 360.0f; scale.x *= (0.5f + 0.5f * t); scale.z *= (0.5f + 0.5f * t);
+                            } else if (buildAnimFloor_ == 3) { 
+                                float bounce = abs(cos(t * 3.14159f * 1.5f)) * (1.0f - t); pos.y += bounce * 1.5f;
+                            } else if (buildAnimFloor_ == 4) { 
+                                pos.y += (1.0f - t) * 4.0f; float flash = 1.0f - (t * 2.0f);
                                 if (flash > 0) color = color + glm::vec3(flash); 
                             }
                         } 
-                        // PHASE 2 : L'EFFET UPGRADE MAGIQUE (0.4s à 0.8s)
                         else {
-                            if (buildAnimFloor_ < 4) { // On ne fait l'upgrade que pour les blocs normaux, pas le dôme
-                                
-                                // On joue le son une seule fois
+                            if (buildAnimFloor_ < 4) { 
                                 if (!buildUpgradeSoundPlayed_) {
                                     playSoundFX("sounds/upgrade.mp3");
                                     buildUpgradeSoundPlayed_ = true;
                                 }
-                                
-                                // Effet de scintillement (flash blanc) et léger grossissement
-                                float shine = sin((t - 1.0f) * 3.14159f); // Monte et descend doucement
-                                color = color + glm::vec3(shine * 0.6f);  // Flash blanc
-                                scale = scale + glm::vec3(shine * 0.08f); // Petit rebond / gonflement
+                                float shine = sin((t - 1.0f) * 3.14159f); 
+                                color = color + glm::vec3(shine * 0.6f);  
+                                scale = scale + glm::vec3(shine * 0.08f); 
                             }
                         }
-                    } else { 
-                        buildAnimActive_ = false; 
-                    }
+                    } else { buildAnimActive_ = false; }
                 }
-                
                 renderElement(pos, scale, color, 1.0f, rot);
             }
 
@@ -253,16 +243,15 @@ void View::viewBoard() {
 
 void View::renderPawn(const glm::vec3& pos, int player, bool isSelected) {
     glm::vec3 baseColor = (player == 0) ? glm::vec3(0.9f, 0.2f, 0.2f) : glm::vec3(0.9f, 0.8f, 0.1f);
-    if (isSelected) {
-        float p = 0.7f + 0.3f * sin(glfwGetTime() * 10.0f);
-        baseColor = baseColor * p + glm::vec3(0.2f); 
-    }
+    if (isSelected) { float p = 0.7f + 0.3f * sin(glfwGetTime() * 10.0f); baseColor = baseColor * p + glm::vec3(0.2f); }
     renderElement(pos + glm::vec3(0.0f, 0.2f, 0.0f), glm::vec3(0.45f, 0.4f, 0.45f), baseColor, 1.0f);
     glm::vec3 headColor = baseColor + glm::vec3(0.2f); 
     renderElement(pos + glm::vec3(0.0f, 0.5f, 0.0f), glm::vec3(0.25f, 0.25f, 0.25f), headColor, 1.0f);
 }
 
 void View::renderElement(const glm::vec3& position, const glm::vec3& scale, const glm::vec3& color, float alpha, glm::vec3 rotation) {
+    if (!s_ || !m_) return; // SECURITE ANTI CRASH
+    
     glm::mat4 model = glm::mat4(1.0f);
     float floatOffset = 0.0f;
     if (!win_) floatOffset = sin(glfwGetTime() * 1.5f) * 0.08f; 
@@ -289,7 +278,6 @@ void View::processInput(GLFWwindow *window, santorini::Controller &c)
         std::string winnerName = c.getPlayerName(winnerId_);
         std::string title = "VICTOIRE DE " + winnerName + " !!! (Appuyez sur Q, A ou Echap pour quitter)";
         glfwSetWindowTitle(window, title.c_str());
-        
         if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS || glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS || glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
             glfwSetWindowShouldClose(window, true);
         return; 
