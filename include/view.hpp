@@ -6,6 +6,7 @@
 #include <GL/glext.h>
 #include <glm/glm.hpp>
 #include <memory>
+#include <atomic>
 
 #include "mesh.hpp"
 #include "shaders/shader.hpp"
@@ -31,6 +32,7 @@ class View
     
         GLFWwindow* getWindow();
         void processInput(GLFWwindow *window, santorini::Controller &c);
+        void setSuppressAnimations(bool v);
 
     private :
         static View & instance_;
@@ -102,6 +104,16 @@ class View
         // --- Ecran d'intro multi (qui suis-je) ---
         float introStartTime_    = -1.0f;
         bool  introShown_        = false;
+
+        // --- Suppression animations pendant reflexion IA ---
+        std::atomic<bool> suppressAnimations_{false};
+        // Snapshot du plateau juste avant que l'IA commence à réfléchir.
+        // Pendant la réflexion, on rend CE snapshot au lieu du board live.
+        int      frozenFloors_[5][5]   = {};
+        Builder* frozenBuilders_[5][5] = {};
+        // --- Etat courant pour le clignotement des pions ---
+        int   currentPlayerId_  = 0;
+        bool  isMyTurnCached_   = true;
 
         void triggerMoveAnimation(int sx, int sy, int ex, int ey, int sFloor, int eFloor, Builder* b);
         void triggerBuildAnimation(int x, int y, int floor);

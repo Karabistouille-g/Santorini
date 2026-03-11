@@ -39,6 +39,12 @@ class Builder {
 
         void undoBuild();
 
+        /**
+         * Forcer la position du builder a une case donnee
+         * (restauration apres minimax IA).
+         */
+        void hardReset(Case* c);
+
     private:
 
         Board* b_; 

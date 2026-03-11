@@ -24,6 +24,23 @@ CMake <br>
 Doxygen <br>
 Google Test <br>
 
+`setup.sh` vérifie que tout est installé mais n'installe rien automatiquement. Installez les dépendances manuellement avant de lancer le script :
+
+**Ubuntu / Debian :**
+```bash
+sudo apt install build-essential cmake libglfw3-dev libgl1-mesa-dev libglu1-mesa-dev libglm-dev
+```
+
+**Fedora :**
+```bash
+sudo dnf install gcc-c++ cmake glfw-devel mesa-libGL-devel mesa-libGLU-devel glm-devel
+```
+
+**Arch :**
+```bash
+sudo pacman -S base-devel cmake glfw-x11 mesa glu glm
+```
+
 ## Organisation
 Les fichiers executables dans le dossier build/ <br>
 Les headers dans include/<br>

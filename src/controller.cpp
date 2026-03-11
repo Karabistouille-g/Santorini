@@ -146,6 +146,10 @@ void Controller::processAI() {
 
     // FIX FREEZE : l'IA tourne dans un thread separe pour ne pas geler GLFW.
     // depth 4 max (depth 5 = plusieurs secondes de calcul = "ne repond pas")
+    // Bloquer les animations pendant la reflexion pour ne pas afficher
+    // tous les coups intermediaires du minimax sur le plateau.
+    View::getInstance().setSuppressAnimations(true);
+
     std::thread([this, diff]() {
         int depth = (diff == 1) ? 1 : (diff == 2 ? 3 : 4);
         std::cout << "[IA] Bob reflechit (profondeur " << depth << ")..." << std::endl;
@@ -153,7 +157,11 @@ void Controller::processAI() {
         Bob bob(diff);
         bob.playTurn();
 
-        // FIX WIN IA : vérifier si l'IA a atteint le niveau 3 apres son deplacement
+        // Re-activer les animations : le prochain frame detectera le coup final
+        // et declenchera l'animation de deplacement/construction.
+        View::getInstance().setSuppressAnimations(false);
+
+        // FIX WIN IA : verifier si l'IA a atteint le niveau 3 apres son deplacement
         for (int i = 0; i < 2; i++) {
             Builder* pawn = model_->getPawn(1, i);
             if (pawn && pawn->getPosition()->getFloor() == 3) {

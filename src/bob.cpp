@@ -241,12 +241,25 @@ int Bob::minimax(int depth, int alpha, int beta, bool maximizing) {
 }
 
 void Bob::playTurn() {
-    // lvl1=depth1, lvl2=depth3, lvl3=depth5
-    // Avec move ordering depth 5 est viable (~0.3-0.8s) là où l'ancien freezait
     int depth;
     if      (difficulty_ == 3) depth = 4;
     else if (difficulty_ == 2) depth = 3;
     else                       depth = 1;
+
+    // === SNAPSHOT du plateau avant le minimax ===
+    // Le minimax modifie/restaure le board via moveBuilder/undoMove etc.
+    // Si un undo rate silencieusement (guard), le board se corrompt progressivement.
+    // On sauvegarde l'etat complet et on le restaure de force apres la recherche.
+    Case* snap_ia1  = iaBuilderFirst  ? iaBuilderFirst->getPosition()  : nullptr;
+    Case* snap_ia2  = iaBuilderSecond ? iaBuilderSecond->getPosition() : nullptr;
+    Case* snap_p1   = playerBuilderFirst  ? playerBuilderFirst->getPosition()  : nullptr;
+    Case* snap_p2   = playerBuilderSecond ? playerBuilderSecond->getPosition() : nullptr;
+
+    int snapFloors[5][5];
+    for (int i = 0; i < 5; i++)
+        for (int j = 0; j < 5; j++)
+            snapFloors[i][j] = b->getCase(i, j)->getFloor();
+    // =============================================
 
     int bestScore = -100000;
     MoveInfo bestMove{};
@@ -296,11 +309,30 @@ void Bob::playTurn() {
     }
 
 applyMove:
+    // === RESTORE du plateau apres le minimax ===
+    // On remet le board exactement dans l'etat d'avant la recherche,
+    // puis on applique le meilleur coup trouve proprement.
+    for (int i = 0; i < 5; i++)
+        for (int j = 0; j < 5; j++) {
+            Case* c = b->getCase(i, j);
+            c->setBuilder(nullptr);
+            while (c->getFloor() > snapFloors[i][j]) c->removeFloor();
+            while (c->getFloor() < snapFloors[i][j]) c->addFloor();
+        }
+    if (iaBuilderFirst  && snap_ia1) iaBuilderFirst->hardReset(snap_ia1);
+    if (iaBuilderSecond && snap_ia2) iaBuilderSecond->hardReset(snap_ia2);
+    if (playerBuilderFirst  && snap_p1) playerBuilderFirst->hardReset(snap_p1);
+    if (playerBuilderSecond && snap_p2) playerBuilderSecond->hardReset(snap_p2);
+    // =============================================
+
     if (bestBuilder) {
-        bestBuilder->moveBuilder(bestMove.moveX, bestMove.moveY);
-        if (bestScore < 20000)
-            bestBuilder->createBuild(bestMove.buildX, bestMove.buildY);
+    bool moved = bestBuilder->moveBuilder(bestMove.moveX, bestMove.moveY);
+    
+    // On vérifie l'état réel du plateau : si l'IA n'est pas sur un étage 3, elle DOIT construire.
+    if (moved && bestBuilder->getPosition()->getFloor() != 3) {
+        bestBuilder->createBuild(bestMove.buildX, bestMove.buildY);
     }
+}
 }bool Builder::createBuild(int x, int y) {
     if (x < 0 || x >= 5 || y < 0 || y >= 5) return false;
     std::cout << getPosition()->getX() << "," << getPosition()->getY() << " -> " << x << "," << y << std::endl;

@@ -80,6 +80,24 @@ void View::setWinner(int id) {
     winnerId_ = id;
 }
 
+void View::setSuppressAnimations(bool v) {
+    if (v) {
+        // Geler l'etat du plateau AVANT que l'IA commence a modifier le board.
+        // frozenFloors_/frozenBuilders_ → utilises par le rendu (pas de visuel qui bouge)
+        // prevFloors_/prevBuilderPos_  → utilises par la detection d'animation
+        // Les deux doivent capturer le MEME instant pour que l'animation post-IA
+        // parte de la bonne position (pre-IA) et arrive a la bonne (post-IA).
+        for (int x = 0; x < 5; x++)
+            for (int y = 0; y < 5; y++) {
+                frozenFloors_[x][y]   = b_->getCase(x, y)->getFloor();
+                frozenBuilders_[x][y] = b_->getCase(x, y)->getBuilder();
+                prevFloors_[x][y]     = b_->getCase(x, y)->getFloor();
+                prevBuilderPos_[x][y] = b_->getCase(x, y)->getBuilder();
+            }
+    }
+    suppressAnimations_.store(v);
+}
+
 void View::triggerMoveAnimation(int sx, int sy, int ex, int ey, int sFloor, int eFloor, Builder* b) {
     moveAnimActive_    = true;
     moveAnimStartX_    = sx; moveAnimStartY_ = sy;
@@ -116,25 +134,34 @@ void View::viewBoard() {
             }
         firstFrame_ = false;
     }
-    for (int x = 0; x < 5; x++) {
-        for (int y = 0; y < 5; y++) {
-            int     curF  = b_->getCase(x, y)->getFloor();
-            Builder* curB = b_->getCase(x, y)->getBuilder();
-            if (curF > prevFloors_[x][y]) triggerBuildAnimation(x, y, curF);
-            if (curB != nullptr && prevBuilderPos_[x][y] != curB) {
-                int oldX = x, oldY = y;
-                for (int px = 0; px < 5; px++)
-                    for (int py = 0; py < 5; py++)
-                        if (prevBuilderPos_[px][py] == curB) { oldX = px; oldY = py; }
-                triggerMoveAnimation(oldX, oldY, x, y, prevFloors_[oldX][oldY], curF, curB);
+    // Pendant la reflexion IA (suppressAnimations_) :
+    //   - on NE detecte PAS d'animation (evite les triggers sur etats intermediaires)
+    //   - on NE met PAS a jour prev (pour garder l'etat pre-IA intact)
+    // Quand l'IA termine et suppress repasse a false, le frame suivant compare
+    // l'etat pre-IA (prev) et l'etat post-IA (live) → animation correcte sur
+    // le bon pion, une seule fois.
+    if (!suppressAnimations_) {
+        for (int x = 0; x < 5; x++) {
+            for (int y = 0; y < 5; y++) {
+                int     curF  = b_->getCase(x, y)->getFloor();
+                Builder* curB = b_->getCase(x, y)->getBuilder();
+                if (curF > prevFloors_[x][y]) triggerBuildAnimation(x, y, curF);
+                if (curB != nullptr && prevBuilderPos_[x][y] != curB) {
+                    int oldX = x, oldY = y;
+                    for (int px = 0; px < 5; px++)
+                        for (int py = 0; py < 5; py++)
+                            if (prevBuilderPos_[px][py] == curB) { oldX = px; oldY = py; }
+                    triggerMoveAnimation(oldX, oldY, x, y, prevFloors_[oldX][oldY], curF, curB);
+                }
             }
         }
+        // Mise a jour de prev UNIQUEMENT quand l'IA ne reflechit pas
+        for (int x = 0; x < 5; x++)
+            for (int y = 0; y < 5; y++) {
+                prevFloors_[x][y]     = b_->getCase(x, y)->getFloor();
+                prevBuilderPos_[x][y] = b_->getCase(x, y)->getBuilder();
+            }
     }
-    for (int x = 0; x < 5; x++)
-        for (int y = 0; y < 5; y++) {
-            prevFloors_[x][y]     = b_->getCase(x, y)->getFloor();
-            prevBuilderPos_[x][y] = b_->getCase(x, y)->getBuilder();
-        }
 
     // --- Couleur de fond ---
     float time = (float)glfwGetTime();
@@ -225,7 +252,9 @@ void View::viewBoard() {
 
     for (int x = 0; x < 5; x++) {
         for (int y = 0; y < 5; y++) {
-            int floors = b_->getCase(x, y)->getFloor();
+            // Pendant la reflexion IA, on lit le snapshot frozen (pas le board live)
+            bool frozen = suppressAnimations_.load();
+            int floors = frozen ? frozenFloors_[x][y] : b_->getCase(x, y)->getFloor();
 
             // --- Dalle en damier ---
             bool isLight  = (x + y) % 2 == 0;
@@ -327,26 +356,51 @@ void View::viewBoard() {
             }
 
             // --- Pions ---
-            if (b_->getCase(x, y)->getBuilder()) {
-                Builder* p    = b_->getCase(x, y)->getBuilder();
-                bool isSel    = (p == lockBuilder_);
+            Builder* pawnHere = frozen ? frozenBuilders_[x][y] : b_->getCase(x, y)->getBuilder();
+            if (pawnHere) {
+                Builder* p = pawnHere;
 
-                if (moveAnimActive_ && p == movingBuilder_) {
-                    float animTime = (float)(glfwGetTime() - moveAnimStartTime_) / 0.4f;
-                    if (animTime < 1.0f) {
-                        float t    = animTime;
-                        float curX = moveAnimStartX_ + (moveAnimEndX_ - moveAnimStartX_) * t;
-                        float curZ = moveAnimStartY_ + (moveAnimEndY_ - moveAnimStartY_) * t;
-                        float sH   = moveAnimStartFloor_ * 0.5f + 0.25f;
-                        float eH   = moveAnimEndFloor_   * 0.5f + 0.25f;
-                        float curH = sH + (eH - sH) * t + std::sin(t * 3.14159f) * 1.3f;
-                        renderPawn(glm::vec3(curX, curH, curZ), p->getPlayer(), isSel);
+                // FIX double-pion : le gagnant est rendu dans winner() avec rebond.
+                // On l'ignore ici pour eviter le doublon (2 pions superposes).
+                if (win_ && p->getPlayer() == winnerId_) { /* rendu dans winner() */ }
+                else {
+                    bool isSel = (p == lockBuilder_);
+
+                    // FIX clignotement : pions du joueur courant quand rien n'est selectionne
+                    bool shouldBlink = (!lock_ && !build_ && !win_
+                                        && isMyTurnCached_
+                                        && p->getPlayer() == currentPlayerId_);
+                    if (shouldBlink) {
+                        float blink = 0.5f + 0.5f * std::sin(time * 4.5f + (float)(x + y));
+                        glm::vec3 bc = (p->getPlayer() == 0)
+                            ? glm::vec3(0.88f, 0.12f, 0.12f)
+                            : glm::vec3(0.15f, 0.35f, 0.90f);
+                        s_->setVec3("emissive", bc.x * blink, bc.y * blink, bc.z * blink);
+                        s_->setFloat("emissiveStrength", 0.7f * blink);
+                    }
+
+                    if (moveAnimActive_ && p == movingBuilder_) {
+                        float animTime = (float)(glfwGetTime() - moveAnimStartTime_) / 0.4f;
+                        if (animTime < 1.0f) {
+                            float t    = animTime;
+                            float curX = moveAnimStartX_ + (moveAnimEndX_ - moveAnimStartX_) * t;
+                            float curZ = moveAnimStartY_ + (moveAnimEndY_ - moveAnimStartY_) * t;
+                            float sH   = moveAnimStartFloor_ * 0.5f + 0.25f;
+                            float eH   = moveAnimEndFloor_   * 0.5f + 0.25f;
+                            float curH = sH + (eH - sH) * t + std::sin(t * 3.14159f) * 1.3f;
+                            renderPawn(glm::vec3(curX, curH, curZ), p->getPlayer(), isSel);
+                        } else {
+                            renderPawn(glm::vec3((float)x, floors * 0.5f + 0.25f, (float)y), p->getPlayer(), isSel);
+                            moveAnimActive_ = false;
+                        }
                     } else {
                         renderPawn(glm::vec3((float)x, floors * 0.5f + 0.25f, (float)y), p->getPlayer(), isSel);
-                        moveAnimActive_ = false;
                     }
-                } else {
-                    renderPawn(glm::vec3((float)x, floors * 0.5f + 0.25f, (float)y), p->getPlayer(), isSel);
+
+                    if (shouldBlink) {
+                        s_->setVec3("emissive", 0.0f, 0.0f, 0.0f);
+                        s_->setFloat("emissiveStrength", 0.0f);
+                    }
                 }
             }
 
@@ -546,6 +600,10 @@ void View::processInput(GLFWwindow* window, santorini::Controller& c)
     if (camElevation_ > 88.0f) camElevation_ = 88.0f;
     if (camElevation_ < 8.0f)  camElevation_ = 8.0f;
 
+    // Mise a jour de l'etat courant pour le clignotement des pions
+    currentPlayerId_ = c.getCurrentPlayer();
+    isMyTurnCached_  = c.isMyTurn() && !win_;
+
     // Titre de fenêtre contextuel
     std::string curPlayer = c.getPlayerName(c.getCurrentPlayer());
     if (c.isOnlineMode() && !c.isMyTurn())
@@ -566,6 +624,11 @@ void View::processInput(GLFWwindow* window, santorini::Controller& c)
     if (glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS) { if (!keyRightPressed_) { if (cursorX_ < 4) cursorX_++; keyRightPressed_ = true; } } else keyRightPressed_ = false;
     if (glfwGetKey(window, GLFW_KEY_LEFT)  == GLFW_PRESS) { if (!keyLeftPressed_)  { if (cursorX_ > 0) cursorX_--; keyLeftPressed_  = true; } } else keyLeftPressed_  = false;
 
+    // Backspace = annuler la sélection en cours
+    if (glfwGetKey(window, GLFW_KEY_BACKSPACE) == GLFW_PRESS && lock_ && !build_) {
+        lock_ = false; lockX_ = -1; lockY_ = -1; lockBuilder_ = nullptr;
+    }
+
     // Action ENTRÉE
     if (glfwGetKey(window, GLFW_KEY_ENTER) == GLFW_PRESS) {
         if (!keyEnterPressed_) {
@@ -575,9 +638,15 @@ void View::processInput(GLFWwindow* window, santorini::Controller& c)
                 { lockX_ = cursorX_; lockY_ = cursorY_; lockBuilder_ = tb; lock_ = true; }
             }
             else if (lock_ && !build_) {
-                int res = c.selectMove(lockBuilder_->getId(), cursorX_, cursorY_);
-                if      (res == 1) { lockX_ = cursorX_; lockY_ = cursorY_; build_ = true; }
-                else if (res == 2) { setWinner(c.getCurrentPlayer()); }
+                // FIX : si on appuie Entree sur un autre pion allie → changer de sélection
+                auto tb = b_->getCase(cursorX_, cursorY_)->getBuilder();
+                if (tb && tb->getPlayer() == c.getCurrentPlayer() && tb != lockBuilder_) {
+                    lockX_ = cursorX_; lockY_ = cursorY_; lockBuilder_ = tb;
+                } else {
+                    int res = c.selectMove(lockBuilder_->getId(), cursorX_, cursorY_);
+                    if      (res == 1) { lockX_ = cursorX_; lockY_ = cursorY_; build_ = true; }
+                    else if (res == 2) { setWinner(c.getCurrentPlayer()); }
+                }
             }
             else if (lock_ && build_) {
                 if (c.selectBuild(lockBuilder_->getId(), cursorX_, cursorY_))

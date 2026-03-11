@@ -81,18 +81,27 @@ int Builder::getId() {
 }
 
 void Builder::undoMove() {
-    // On retire la position actuelle (sommet = dernier mouvement)
+    if (moves_.size() <= 1) return; // guard
     moves_.pop();
-    // La position précédente est maintenant au sommet
     Case* previous = moves_.top();
-
-    position_->setBuilder(nullptr);  // retirer de la case actuelle
-    previous->setBuilder(this);      // remettre dans l’ancienne
+    position_->setBuilder(nullptr);
+    previous->setBuilder(this);
     position_ = previous;
 }
 
 void Builder::undoBuild() {
+    if (builds_.empty()) return; // guard
     Case* build = builds_.top();
     builds_.pop();
     build->removeFloor();
+}
+
+void Builder::hardReset(Case* c) {
+    // Vide les stacks et force la position — appele une seule fois apres minimax
+    if (position_) position_->setBuilder(nullptr);
+    while (!moves_.empty())  moves_.pop();
+    while (!builds_.empty()) builds_.pop();
+    position_ = c;
+    position_->setBuilder(this);
+    moves_.push(position_);
 }
